@@ -22,6 +22,7 @@ mono_crash.*
 [Rr]elease/
 [Rr]eleases/
 PROD/
+PROD-NOSTARTUP/
 x64/
 x86/
 [Ww][Ii][Nn]32/
