@@ -13,7 +13,7 @@ But this will protect you against most (nearly every) token grabbers.
 
 ## Installation / Update
 
-### Download the lastest release **[HERE](http://)**
+### Download the lastest release **[HERE](https://github.com/andro2157/DiscordTokenProtector/releases)**
 
 ###### A better installation process will be made. This is temporary.
 
