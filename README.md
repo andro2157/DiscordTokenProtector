@@ -47,6 +47,8 @@ Meaning that all of your client-specific settings will be removed each time you 
 
 * Some anti-virus flags DiscordTokenProtector because it can start with Windows. I provided builds without the autostart.
 
+* DiscordTokenProtector doesn't seem to work well on Windows 7
+
 ## Compilation
 
 To compile this you'll need to include these following libraries:
