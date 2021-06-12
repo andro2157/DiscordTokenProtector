@@ -73,7 +73,7 @@ bool Config::save() {
 bool Config::load() {
 	bool saveWhenComplete = false;
 
-	const std::lock_guard<std::mutex> lock(m_mutex);
+	m_mutex.lock();
 
 	m_file.seekg(0);
 	std::string file_str((std::istreambuf_iterator<char>(m_file)), std::istreambuf_iterator<char>());
@@ -115,5 +115,6 @@ bool Config::load() {
 		return save();
 	}
 
+	m_mutex.unlock();
 	return true;
 }
