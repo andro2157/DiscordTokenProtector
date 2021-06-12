@@ -804,12 +804,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\Pictures\512x icon.png">
-      <Filter>Fichiers de ressources</Filter>
-    </Image>
-    <Image Include="..\..\..\..\Pictures\512x icon.ico">
-      <Filter>Fichiers de ressources</Filter>
-    </Image>
     <Image Include="512x icon.ico">
       <Filter>Fichiers de ressources</Filter>
     </Image>

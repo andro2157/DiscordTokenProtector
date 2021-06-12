@@ -479,8 +479,6 @@
     <ResourceCompile Include="DiscordTokenProtector.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\Pictures\512x icon.ico" />
-    <Image Include="..\..\..\..\Pictures\512x icon.png" />
     <Image Include="512x icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
