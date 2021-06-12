@@ -20,7 +20,7 @@ But this will protect you against most (nearly every) token grabbers.
 * Extract the zip file anywhere
 * Start the install.bat
 * If an existing installation is detected, you can either remove it or update it. Else it will automatically install it in `%appdata%\DiscordTokenProtector`
-* You'll need to make a shortcut to `%appdata%\DiscordTokenProtector\DiscordTokenProtector.exe` to start it.
+* Launch the "DiscordTokenProtector" shortcut included in the archive to start it.
 
 ## What does it do?
 
