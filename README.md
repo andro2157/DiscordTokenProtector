@@ -49,6 +49,8 @@ Meaning that all of your client-specific settings will be removed each time you 
 
 * DiscordTokenProtector doesn't seem to work well on Windows 7
 
+* This won't protect you from grabbers that injects scripts into Discord.
+
 ## Compilation
 
 To compile this you'll need to include these following libraries:
