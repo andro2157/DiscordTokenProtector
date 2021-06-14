@@ -9,9 +9,10 @@
 #pragma comment(lib, "advapi32.lib")
 
 #include <iostream>
+#include "Crypto/Crypto.h"
 
 //https://stackoverflow.com/a/36401787/13544464
-inline size_t CurlWrite_CallbackFunc_StdString(void* contents, size_t size, size_t nmemb, std::string* s) {
+inline size_t CurlWrite_CallbackFunc_SecureString(void* contents, size_t size, size_t nmemb, secure_string* s) {
 	size_t newLength = size * nmemb;
 	try {
 		s->append((char*)contents, newLength);
@@ -40,7 +41,7 @@ inline void curl_slist_secure_zero(struct curl_slist* list) {
 	} while (next);
 }
 
-inline void cURL_post(std::string url, curl_slist* header, const std::string& postData, std::string& output) {
+inline void cURL_post(std::string url, curl_slist* header, const secure_string& postData, secure_string& output, const std::string& customRequest = "") {
 	CURL* curl = curl_easy_init();
 	if (!curl) throw std::runtime_error("Failed to initialize cURL");
 
@@ -53,9 +54,12 @@ inline void cURL_post(std::string url, curl_slist* header, const std::string& po
 	if (!postData.empty())
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
 
+	if (!customRequest.empty())//PATCH, PUT, ...
+		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, customRequest.c_str());
+
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc_StdString);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc_SecureString);
 
 	res = curl_easy_perform(curl);
 
@@ -67,6 +71,6 @@ inline void cURL_post(std::string url, curl_slist* header, const std::string& po
 	curl_easy_cleanup(curl);
 }
 
-inline void cURL_get(std::string url, curl_slist* header, std::string& output) {
+inline void cURL_get(std::string url, curl_slist* header, secure_string& output) {
 	cURL_post(url, header, "", output);
 }
