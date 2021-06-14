@@ -2,7 +2,7 @@
 #### Protect your Discord token from malicious grabbers!
 
 <p align="center">
-  <img width="500" src="DiscordTokenProtectorUI.png">
+  <img width="500" src="Assets/DiscordTokenProtectorUI.png">
 </p>
 
 This project is still under development! You might face some unstability issues!\
@@ -27,7 +27,7 @@ But this will protect you against most (nearly every) token grabbers.
 Here's a little diagram on how it works:
 
 <p align="center">
-  <img width="800" src="how_does_it_work.jpg">
+  <img width="800" src="Assets/how_does_it_work.jpg">
 </p>
 
 It basically removes the `Local Storage` and `Session Storage` directories from `%appdata%\Discord`.
