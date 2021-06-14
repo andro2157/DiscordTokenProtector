@@ -339,7 +339,7 @@ WORD Discord::getDiscordRPCPort() {
 	WORD workingPort = 0;
 	for (WORD port = 6463; port <= 6472; port++) {
 		try {
-			std::string out;
+			secure_string out;
 			cURL_get(sf() << "http://127.0.0.1:" << port, nullptr, out);
 			json outJson = json::parse(out);
 			if (outJson["code"].get<int>() == 0 && outJson["message"].get<std::string>() == "Not Found") {
@@ -366,8 +366,8 @@ bool Discord::AcceptHandoff(const std::string& port, const std::string& key, con
 		json handoffData;
 		handoffData["key"] = key;
 
-		std::string handoffToken;
-		cURL_post("https://discord.com/api/v8/auth/handoff", chunk, handoffData.dump(), handoffToken);
+		secure_string handoffToken;
+		cURL_post("https://discord.com/api/v8/auth/handoff", chunk, handoffData.dump().c_str(), handoffToken);
 		handoffToken = json::parse(handoffToken)["handoff_token"].get<std::string>();
 
 		chunk = NULL;//Gets freed in cURL_post
@@ -381,8 +381,8 @@ bool Discord::AcceptHandoff(const std::string& port, const std::string& key, con
 		handoffData["args"]["handoffToken"] = handoffToken;
 		handoffData["nonce"] = getRandomUUID();
 
-		std::string handoffRPCOut;
-		cURL_post("http://127.0.0.1:" + port + "/rpc?v=1", chunk, handoffData.dump(), handoffRPCOut);
+		secure_string handoffRPCOut;
+		cURL_post("http://127.0.0.1:" + port + "/rpc?v=1", chunk, handoffData.dump().c_str(), handoffRPCOut);
 		json rpcResp = json::parse(handoffRPCOut);
 		if (rpcResp.contains("code") && rpcResp.contains("message")) {//Error!
 			throw std::runtime_error(sf() << "Error " << rpcResp["code"].get<int>() << " : " << rpcResp["message"].get<std::string>());
@@ -405,7 +405,7 @@ std::string Discord::getUserInfo(const secure_string& token) {
 		chunk = curl_slist_append(chunk, ("Authorization: " + token).c_str());
 		chunk = curl_slist_append(chunk, "Content-Type: application/json");
 
-		std::string userinfo;
+		secure_string userinfo;
 		cURL_get("https://discordapp.com/api/v6/users/@me", chunk, userinfo);
 
 		json userinfoJSON = json::parse(userinfo);
@@ -478,6 +478,102 @@ secure_string Discord::getStoredToken(bool verify) {
 	return results.rbegin()->first;//Returns the token with the most matches
 
 	return "";
+}
+
+bool Discord::changePassword(
+	const secure_string& token,
+	const secure_string& currentPassword,
+	const secure_string& newPassword,
+	const secure_string& mfaCode,
+	secure_string& error) {
+
+	secure_string patchData;//We're avoiding the json lib to not keep the data in memory
+
+	auto jsonEscape = [](const secure_string& data) {
+		secure_string out;
+		out.reserve(data.size());
+
+		for (const char c : data) {
+			switch (c) {
+			case '\b': out += "\\b"; break;
+			case '\f': out += "\\f"; break;
+			case '\n': out += "\\n"; break;
+			case '\r': out += "\\r"; break;
+			case '\t': out += "\\t"; break;
+			case '\"': out += "\\\""; break;
+			case '\\': out += "\\\\"; break;
+			default: out += c;  break;
+			}
+		}
+
+		return out;
+	};
+
+	patchData += "{\"password\":\"" + jsonEscape(currentPassword) +
+		"\",\"new_password\":\"" + jsonEscape(newPassword) + "\"";
+
+	if (!mfaCode.empty()) {
+		patchData += ",\"code\":\"" + jsonEscape(mfaCode) + "\"";
+	}
+
+	patchData += "}";
+
+	try {
+		struct curl_slist* chunk = NULL;
+		chunk = curl_slist_append(chunk, ("Authorization: " + token).c_str());
+		chunk = curl_slist_append(chunk, "Content-Type: application/json");
+		chunk = curl_slist_append(chunk, "Accept-Language: en-US");
+
+		secure_string output;
+		cURL_post("https://discord.com/api/v9/users/@me", chunk, patchData, output, "PATCH");
+
+		//To avoid using json or regex (insecure)
+		auto getStringKey = [](const secure_string& data, secure_string key) {
+			key = "\"" + key + "\": \"";
+			size_t pos = data.find(key);
+			if (pos == secure_string::npos) return secure_string();
+
+			size_t endPos = pos + key.size();
+			while (true) {
+				endPos = data.find("\"", endPos);
+				if (endPos == secure_string::npos) return secure_string();
+				if (data[endPos - 1] == '\\') {
+					++endPos;
+					continue;
+				}
+				break;
+			}
+
+			return data.substr(pos + key.size(), endPos - pos - key.size());
+		};
+
+		//Requires 2FA!
+		if (auto pos = output.find("\"code\": 60008"); pos != secure_string::npos) {
+			error = "2FA";
+			return false;
+		}
+
+		//Other errors
+		if (secure_string message = getStringKey(output, "message"); !message.empty()) {
+			error = message;
+			return false;
+		}
+
+		//Success!
+		if (secure_string token = getStringKey(output, "token"); !token.empty()) {
+			error = token;
+			return true;
+		}
+
+		//Unknown error
+		error = "Unknown error";
+		return false;
+	}
+	catch (std::exception& e) {
+		g_logger.error(sf() << "Failed changePassword : " << e.what());
+		error = e.what();
+		return false;
+	}
 }
 
 //Credit : https://guidedhacking.com/threads/how-to-pass-multiple-arguments-with-createremotethread-to-injected-dll.15373/

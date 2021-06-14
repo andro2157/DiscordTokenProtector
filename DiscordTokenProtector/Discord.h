@@ -38,6 +38,14 @@ public:
 	static bool AcceptHandoff(const std::string& port, const std::string& key, const secure_string& token);
 	static std::string getUserInfo(const secure_string& token);
 	static secure_string getStoredToken(bool verify);
+
+	//error = token if it is successfull
+	static bool changePassword(
+		const secure_string& token,
+		const secure_string& currentPassword,
+		const secure_string& newPassword,
+		const secure_string& mfaCode,
+		secure_string& error);
 private:
 	static std::wstring getLocal();
 	static std::vector<DWORD> getProcessIDbyName(std::wstring process_name);

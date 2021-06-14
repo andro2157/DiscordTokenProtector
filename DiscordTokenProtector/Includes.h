@@ -24,7 +24,7 @@ __forceinline void FATALERROR_STR(std::string str) {
 	FATALERROR(str.c_str());
 }
 
-#define VER "dev-4"
+#define VER "dev-5"
 
 //The autostart gets flagged by some AV haha
 //#define DISABLE_AUTOSTART
