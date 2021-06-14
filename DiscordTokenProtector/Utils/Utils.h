@@ -8,7 +8,9 @@
 
 class EasyAsync {
 public:
-    EasyAsync(std::function<void()> fn) : m_fn(fn) {}
+    EasyAsync(std::function<void()> fn, bool startOnInit = false) : m_fn(fn) {
+        if (startOnInit) start();
+    }
 
     void start() {
         if (m_isRunning) return;

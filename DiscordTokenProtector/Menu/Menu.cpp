@@ -589,11 +589,14 @@ namespace Menu {
 		if (ImGui::BeginChild("AccountTab")) {
 			//TODO merge with existing code
 			static DiscordUserInfo info;
-			static std::future<void> getInfoAsync = std::async(std::launch::async, []() {
+			static EasyAsync getInfoAsync([]() {
 				info = Discord::getUserInfo(g_secureKV->read("token", g_context.kd));
-			});
+			}, true);
 
 			ImGui::Text("Your account:");
+			ImGui::SameLine();
+			if (ImGui::Button("Refresh")) getInfoAsync.start();
+
 			ImGui::NewLine();
 
 			if (info.id.empty()) {
@@ -617,6 +620,11 @@ namespace Menu {
 			ImGui::NewLine();
 
 			if (ImGui::CollapsingHeader("Change the account password")) {
+				/*
+				Using std::unique_ptr<secure_string> instead of char[] doesn't seem to fix the issue with
+				the content not being zero'd.
+				It might be due to ImGui that copies the content
+				*/
 				static std::unique_ptr<secure_string> passwordInput;
 				static std::unique_ptr<secure_string> newPasswordInput;
 				static std::unique_ptr<secure_string> mfaInput;
