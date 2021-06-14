@@ -10,6 +10,15 @@ enum class DiscordType {
 	DiscordCanary
 };
 
+//No need to store more info
+struct DiscordUserInfo {
+	std::string fullUsername = "";//username#discriminator
+	std::string username = "";
+	std::string discriminator = "";
+	std::string id = "";
+	bool mfa = false;
+};
+
 class Discord {
 private:
 	typedef LONG(NTAPI* NtResumeProcess)(HANDLE ProcessHandle);
@@ -36,7 +45,7 @@ public:
 
 	static WORD getDiscordRPCPort();
 	static bool AcceptHandoff(const std::string& port, const std::string& key, const secure_string& token);
-	static std::string getUserInfo(const secure_string& token);
+	static DiscordUserInfo getUserInfo(const secure_string& token);
 	static secure_string getStoredToken(bool verify);
 
 	//error = token if it is successfull

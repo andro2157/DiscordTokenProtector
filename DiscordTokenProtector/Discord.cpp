@@ -397,7 +397,7 @@ bool Discord::AcceptHandoff(const std::string& port, const std::string& key, con
 	return true;
 }
 
-std::string Discord::getUserInfo(const secure_string& token) {
+DiscordUserInfo Discord::getUserInfo(const secure_string& token) {
 	using nlohmann::json;
 
 	try {
@@ -413,14 +413,19 @@ std::string Discord::getUserInfo(const secure_string& token) {
 		if (userinfoJSON.contains("message"))
 			throw std::runtime_error(userinfoJSON["message"].get<std::string>());
 
-		return sf() << userinfoJSON["username"].get<std::string>() << "#" << userinfoJSON["discriminator"].get<std::string>()
-			<< " (" << userinfoJSON["id"].get<std::string>() << ")";
+		return {
+			userinfoJSON["username"].get<std::string>() + "#" + userinfoJSON["discriminator"].get<std::string>(),
+			userinfoJSON["username"].get<std::string>(),
+			userinfoJSON["discriminator"].get<std::string>(),
+			userinfoJSON["id"].get<std::string>(),
+			userinfoJSON["mfa_enabled"].get<bool>()
+		};
 	}
 	catch (const std::exception& e) {
 		g_logger.error(sf() << "Failed getUserInfo : " << e.what());
 	}
 
-	return std::string();
+	return DiscordUserInfo();
 }
 
 secure_string Discord::getStoredToken(bool verify) {
@@ -450,7 +455,7 @@ secure_string Discord::getStoredToken(bool verify) {
 							secure_string match(matches[1].str());
 							if (results.find(match) == results.end()) {//A new token! let's add it to the list
 								if (std::find(invalids.begin(), invalids.end(), match) == invalids.end()) {//If not invalid
-									if (verify && getUserInfo(match).empty())
+									if (verify && getUserInfo(match).id.empty())
 										invalids.push_back(match);
 									else
 										results.insert({ match, 1 });

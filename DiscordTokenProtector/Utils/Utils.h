@@ -2,8 +2,33 @@
 #define WIN32_LEAN_AND_MEAN
 #include <iostream>
 #include <random>
+#include <future>
 #include <Windows.h>
 #include "shlobj.h"
+
+class EasyAsync {
+public:
+    EasyAsync(std::function<void()> fn) : m_fn(fn) {}
+
+    void start() {
+        if (m_isRunning) return;
+
+        m_async = std::async(std::launch::async, m_fn);
+    }
+
+    bool isRunning() const { return m_isRunning; }
+
+private:
+    std::function<void()> m_fn;
+    std::future<void> m_async;
+    bool m_isRunning = false;
+};
+
+template<class T>
+inline void removeTaillingNulls(T& data) {
+    if (auto pos = data.find('\000'); pos != T::npos)
+        data.erase(pos);
+}
 
 inline std::wstring getAppDataPathW() {
     TCHAR szPath[MAX_PATH];

@@ -67,7 +67,7 @@ public:
 	inline void initTokenState() {
 		auto discoverToken = [this](bool hwid = false) {
 			secure_string token = Discord::getStoredToken(true);
-			if (token.empty() || Discord::getUserInfo(token).empty()) {//TODO invalid token message
+			if (token.empty() || Discord::getUserInfo(token).id.empty()) {//TODO invalid token message
 				this->state = hwid ? State::InvalidHWID : State::NoToken;
 			}
 			else if (hwid) {
@@ -87,7 +87,7 @@ public:
 
 		if (encryptionType_cache == EncryptionType::HWID) {
 			secure_string token = g_secureKV->read("token", HWID_kd);
-			if (token.empty() || Discord::getUserInfo(token).empty()) {
+			if (token.empty() || Discord::getUserInfo(token).id.empty()) {
 				discoverToken(true);
 			}
 			else {
