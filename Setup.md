@@ -8,10 +8,10 @@
 
 *DiscordTokenProtector might not work correctly on Canary versions of Discord!*
 
-### 1.1) If you are logged into your Discord account, you shouldn't face this step
+### 1.5) If you are logged into your Discord account, you shouldn't face this step
 
 This step is triggered if DiscordTokenProtector is unable to find your Discord token.
-If you get this step eventhough you're connect on the Discord client, please open an issue.
+If you get this step eventhough you're connected on the Discord client, please open an issue.
 
 You'll just need to log into your account on Discord and close the app.
 
