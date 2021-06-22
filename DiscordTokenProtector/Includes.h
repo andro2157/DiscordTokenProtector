@@ -5,6 +5,7 @@
 #include <string>
 #include <streambuf>
 #include <chrono>
+#include <map>
 
 #include <filesystem>
 

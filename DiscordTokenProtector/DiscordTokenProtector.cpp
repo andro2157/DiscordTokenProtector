@@ -6,7 +6,28 @@
 #include "Menu/Menu.h"
 #include "Context.h"
 
+#include "Protection/IntegrityCheck.h"
+
 void mainInit() {
+    IntegrityCheck ic;
+    ic.setCheckExecutableSig(true);
+    ic.setCheckModule(true);
+    ic.setCheckResources(true);
+    ic.setCheckScripts(true);
+    ic.setAllowBetterDiscord(true);
+
+    ic.setCheckHash(true);
+    ic.setFileHash(IntegrityCheck::loadHashDump("hash.txt"));
+
+    ic.check("C:\\Users\\Andro\\AppData\\Local\\Discord\\app-1.0.9002");
+    ic.printIssues();
+
+    //IntegrityCheck::dumpHashFiles("C:\\Users\\Andro\\AppData\\Local\\Discord\\app-1.0.9002", "hash.txt");
+
+    g_logger.info("Done");
+
+    Sleep(3600 * 1000);
+
     try {
 #ifdef _PROD
         g_logger.setOutFile(Config::getConfigPath() + L"logging.log");

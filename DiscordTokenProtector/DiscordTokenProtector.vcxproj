@@ -304,6 +304,7 @@
     <ClCompile Include="Discord.cpp" />
     <ClCompile Include="DiscordTokenProtector.cpp" />
     <ClCompile Include="Crypto\Crypto.cpp" />
+    <ClCompile Include="Protection\IntegrityCheck.cpp" />
     <ClCompile Include="Lib\imgui\GL\gl3w.c" />
     <ClCompile Include="Lib\imgui\imgui.cpp" />
     <ClCompile Include="Lib\imgui\imgui_demo.cpp" />
@@ -517,6 +518,7 @@
     <ClInclude Include="Context.h" />
     <ClInclude Include="Crypto\Crypto.h" />
     <ClInclude Include="Crypto\CryptoUtils.h" />
+    <ClInclude Include="Protection\IntegrityCheck.h" />
     <ClInclude Include="Menu\Colors.h" />
     <ClInclude Include="Menu\FrameRateLimiter.h" />
     <ClInclude Include="Lib\imgui\GLFW\glfw3.h" />

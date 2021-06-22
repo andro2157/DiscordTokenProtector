@@ -1,7 +1,9 @@
 #pragma once
 #include "../Includes.h"
+#include "Crypto.h"
 #include <cryptopp/hex.h>
 #include <cryptopp/osrng.h>
+#include <cryptopp/sha.h>
 
 enum class EncryptionType {
 	HWID,
@@ -63,5 +65,19 @@ namespace CryptoUtils {
 		decoder.MessageEnd();
 
 		return result;
+	}
+
+	//Note: not secure
+	inline std::string SimpleSHA256(const std::string& data) {
+		using namespace CryptoPP;
+
+		std::string digest;
+
+		SHA256 hash;
+		hash.Update((const byte*)data.data(), data.size());
+		digest.resize(hash.DigestSize());
+		hash.Final((byte*)&digest[0]);
+
+		return toHex(digest);
 	}
 }
