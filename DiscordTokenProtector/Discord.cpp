@@ -14,7 +14,7 @@ uintptr_t GetProcAddressEx(HANDLE hProcess, DWORD pid, const char* module, const
 
 Discord::Discord() {
 	searchDiscord();
-	if (m_discordPath.empty() && m_discordCanaryPath.empty()) throw std::runtime_error("Unable to find discord! Is it installed?");
+	if (m_discordModulePath.empty() && m_discordCanaryModulePath.empty()) throw std::runtime_error("Unable to find discord! Is it installed?");
 
 	pfnNtSuspendProcess = reinterpret_cast<NtSuspendProcess>(GetProcAddress(GetModuleHandle(TEXT("ntdll.dll")), "NtSuspendProcess"));
 	if (pfnNtSuspendProcess == nullptr) throw std::runtime_error("NtSuspendProcess was null");
@@ -24,8 +24,8 @@ Discord::Discord() {
 }
 
 void Discord::searchDiscord() {
-	auto searchBestDiscordVersion = [](std::wstring path, std::wstring moduleName) {
-		std::wstring outPath;
+	auto searchBestDiscordVersion = [](std::wstring path, std::wstring moduleName,
+		std::wstring& discordPath, std::wstring& modulePath, std::string& discordVersion) {
 
 		UINT BestMajor = 0;
 		UINT BestMinor = 0;
@@ -69,7 +69,9 @@ void Discord::searchDiscord() {
 						BestMinor = Minor;
 						BestPatch = Patch;
 
-						outPath = path + L"\\" + moduleName;
+						discordPath = path;
+						modulePath = path + L"\\" + moduleName;
+						discordVersion = ws2s(version);
 					}
 				}
 			}
@@ -78,20 +80,24 @@ void Discord::searchDiscord() {
 			g_logger.warning(sf() << "Failed to find Discord in " << ws2s(path) << " : " << e.what());
 		}
 
-		if (outPath.empty()) {
-			return std::wstring();
+		if (modulePath.empty() || !isValidDiscordModule(modulePath)) {
+			modulePath.clear();
 		}
-
-		if (!isValidDiscordModule(outPath)) {
-			outPath = L"";
-			return std::wstring();
-		}
-
-		return outPath;
 	};
 
-	m_discordPath = searchBestDiscordVersion(getLocal() + L"\\Discord\\", L"Discord.exe");
-	m_discordCanaryPath = searchBestDiscordVersion(getLocal() + L"\\DiscordCanary\\", L"DiscordCanary.exe");
+	searchBestDiscordVersion(
+		getLocal() + L"\\Discord\\", L"Discord.exe",
+		m_discordPath,
+		m_discordModulePath,
+		m_discordVersion
+	);
+
+	searchBestDiscordVersion(
+		getLocal() + L"\\DiscordCanary\\", L"DiscordCanary.exe",
+		m_discordCanaryPath,
+		m_discordCanaryModulePath,
+		m_discordCanaryVersion
+	);
 }
 
 bool Discord::isValidDiscordModule(std::wstring path) {
@@ -180,7 +186,7 @@ PROCESS_INFORMATION Discord::startSuspendedDiscord(DiscordType type) {
 
 	if (!CreateProcessW(
 			NULL,
-			const_cast<LPWSTR>((type == DiscordType::Discord ? m_discordPath : m_discordCanaryPath).c_str()),
+			const_cast<LPWSTR>((type == DiscordType::Discord ? m_discordModulePath : m_discordCanaryModulePath).c_str()),
 			NULL, NULL, FALSE, CREATE_SUSPENDED, NULL,
 			const_cast<LPCWSTR>(processDir.c_str()),
 			&startupInfo, &processInfo)) {
@@ -406,7 +412,7 @@ DiscordUserInfo Discord::getUserInfo(const secure_string& token) {
 		chunk = curl_slist_append(chunk, "Content-Type: application/json");
 
 		secure_string userinfo;
-		cURL_get("https://discordapp.com/api/v6/users/@me", chunk, userinfo);
+		cURL_get("https://discord.com/api/v9/users/@me", chunk, userinfo);
 
 		json userinfoJSON = json::parse(userinfo);
 

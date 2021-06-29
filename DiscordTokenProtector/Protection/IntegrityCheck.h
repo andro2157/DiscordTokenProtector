@@ -17,6 +17,10 @@ namespace Signatures {
 	};
 }
 
+constexpr auto HASH_URL = "https://raw.githubusercontent.com/andro2157/DiscordTokenProtector/master/DiscordHash/";
+
+const inline std::vector<std::string> IGNORED_EXT = {"log", "tmp"};
+
 class IntegrityCheck {
 public:
 	//dir, issue
@@ -24,7 +28,9 @@ public:
 	//dir, hash
 	using filehash = std::map<std::string, std::string>;
 
-	IntegrityCheck() {}
+	IntegrityCheck() {
+		if (!std::filesystem::exists("cache")) std::filesystem::create_directory("cache");
+	}
 
 	bool check(const std::string& discordDir);
 
@@ -44,22 +50,32 @@ public:
 	void setAllowBetterDiscord(const bool allow) { m_allowBetterDiscord = allow; }
 	bool isAllowingBetterDiscord() const { return m_allowBetterDiscord; }
 
-	void setFileHash(const filehash& hashes) { m_fileHash = hashes; }
-	filehash getFileHash() const { return m_fileHash; }
+	void setDiscordVersion(const std::string& version) { m_discordVersion = version; }
+	std::string getDiscordVersion() const { return m_discordVersion; }
 
 	size_t getProgress() const { return m_progress; }
 	size_t getProgressTotal() const { return m_progressTotal; }
 
 	void printIssues();
 
+	//Use this to dump the hashes of your current installation!
+	static void dumpCurrentDiscordHashes(const std::string& discordDir, const std::string& version);
+
 	static void dumpHashFiles(const std::string& dir, const std::string& outFilename);
+	static void dumpHashFiles(const std::vector<std::pair<std::string, std::string>>& hashes, const std::string& outFilename);
+
 	static filehash loadHashDump(const std::string& dumpFilename);
-	static std::vector<std::pair<std::string, std::string>> hashFilesinDir(const std::string& dir);
+	static std::vector<std::pair<std::string, std::string>> hashFilesinDir(const std::string& dir,
+		std::function<bool(std::filesystem::directory_entry)> isIgnoredFn = isFileIgnored);
+	//For the non-modules hashes, moduleName = "main"
+	static bool downloadDiscordHash(const std::string& version, const std::string& moduleName, std::string& outFilename, bool overWrite = false);
 
 private:
 	static bool checkSig(const std::string& data, const std::vector<std::string>& sigs);	
-	static size_t getFileDirCountInDir(const std::string& dir);
+	static size_t getFileDirCountInDir(const std::string& dir,
+		std::function<bool(std::filesystem::directory_entry)> isIgnoredFn = [](std::filesystem::directory_entry file) {return false; });
 	static std::string getRelativePath(std::string discordDir, std::string absolutePath);
+	static bool isFileIgnored(std::filesystem::directory_entry file);
 
 	void checkModules(const std::string& discordDir);
 	void checkKnownSignatures(const std::string& filename, const std::string& data = "");
@@ -75,8 +91,8 @@ private:
 
 	bool m_allowBetterDiscord = false;
 
-	size_t m_progress = 0;
-	size_t m_progressTotal = 0;
+	std::atomic_uint64_t m_progress = 0;
+	std::atomic_uint64_t m_progressTotal = 0;
 
-	filehash m_fileHash;
+	std::string m_discordVersion;
 };

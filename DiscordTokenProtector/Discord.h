@@ -55,12 +55,29 @@ public:
 		const secure_string& newPassword,
 		const secure_string& mfaCode,
 		secure_string& error);
+
+	std::wstring getDiscordPath(DiscordType type) {
+		return (type == DiscordType::Discord) ? m_discordPath : (type == DiscordType::DiscordCanary) ? m_discordCanaryPath : L"";
+	}
+	std::wstring getDiscordModulePath(DiscordType type) {
+		return (type == DiscordType::Discord) ? m_discordModulePath : 
+			(type == DiscordType::DiscordCanary) ? m_discordCanaryModulePath : L"";
+	}
+	std::string getDiscordVersion(DiscordType type) {
+		return (type == DiscordType::Discord) ? m_discordVersion : (type == DiscordType::DiscordCanary) ? m_discordCanaryVersion : "";
+	}
+
 private:
 	static std::wstring getLocal();
 	static std::vector<DWORD> getProcessIDbyName(std::wstring process_name);
 
 	std::wstring m_discordPath;
+	std::wstring m_discordModulePath;
+	std::string m_discordVersion;
+
 	std::wstring m_discordCanaryPath;
+	std::wstring m_discordCanaryModulePath;
+	std::string m_discordCanaryVersion;
 
 	NtSuspendProcess pfnNtSuspendProcess;
 	NtResumeProcess pfnNtResumeProcess;

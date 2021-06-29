@@ -2,40 +2,59 @@
 #include "FileCert.h"
 #include "../Utils/Logger.h"
 #include "../Utils/Utils.h"
+#include "../Utils/CurlUtils.h"
 #include "../Crypto/CryptoUtils.h"
 
 bool IntegrityCheck::check(const std::string& discordDir) {
+	m_issues.clear();
 	m_progress = 0;
 	m_progressTotal = 0;
 
 	try {
-		if (m_checkFilehash && m_fileHash.empty()) {
-			throw std::runtime_error("Tried to check file hashes without the hashes");
+		if (m_discordVersion.empty()) throw std::runtime_error("The Discord version is not set!");
+
+		filehash mainFileHash;
+
+		if (m_checkFilehash) {
+			std::string filename;
+			if (downloadDiscordHash(m_discordVersion, "main", filename))
+				mainFileHash = loadHashDump(filename);
+			else
+				m_issues.push_back({ discordDir, "Unable to get hashes for this version of Discord!" });
 		}
 
 		if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash) {
-			m_progressTotal += getFileDirCountInDir(discordDir);
+			const std::string modulesDir = discordDir + "\\modules";
+
+			m_progressTotal += getFileDirCountInDir(discordDir, [&modulesDir](std::filesystem::directory_entry file) {
+				return isFileIgnored(file) || file.path().u8string().substr(0, modulesDir.size()) == modulesDir;//Repetitive
+			});
 
 			for (const auto& file : std::filesystem::recursive_directory_iterator(discordDir)) {
+				if (isFileIgnored(file)) continue;
+
+				//Ignore files in modules, they are checked by checkModules
+				if (file.path().u8string().substr(0, modulesDir.size()) == modulesDir) continue;
+
 				if (file.is_directory()) {
-					if (m_checkFilehash) {
+					if (m_checkFilehash && !mainFileHash.empty()) {
 						std::string relativePath = getRelativePath(discordDir, file.path().u8string());
 
-						if (auto it = m_fileHash.find(relativePath); it == m_fileHash.end() &&
+						if (auto it = mainFileHash.find(relativePath); it == mainFileHash.end() &&
 							!(m_allowBetterDiscord && relativePath == "resources\\app"))
-							m_issues.push_back({ file.path().u8string(), "Unexpected directory!" });
+							m_issues.push_back({ file.path().u8string(), "Unexpected directory! 0x1" });
 					}
 					m_progress++;
 				}
 				else if (file.is_regular_file()) {
-					if (m_checkFilehash) {
+					if (m_checkFilehash && !mainFileHash.empty()) {
 						std::string relativePath = getRelativePath(discordDir, file.path().u8string());
 
-						auto it = m_fileHash.find(relativePath);
-						if (it == m_fileHash.end()) {
+						auto it = mainFileHash.find(relativePath);
+						if (it == mainFileHash.end()) {
 							if (!m_allowBetterDiscord ||
 								(relativePath != "resources\\app\\index.js" && relativePath != "resources\\app\\package.json"))
-								m_issues.push_back({ file.path().u8string(), "Unexpected file!" });
+								m_issues.push_back({ file.path().u8string(), "Unexpected file! 0x1" });
 						}
 						else if (CryptoUtils::SimpleSHA256(getFileContent(file.path().u8string())) != it->second) {
 							m_issues.push_back({ file.path().u8string(), "Invalid hash!" });
@@ -68,7 +87,7 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 		m_issues.push_back({"EXCEPTION", e.what()});
 	}
 
-	return !m_issues.empty();
+	return m_issues.empty();
 }
 
 void IntegrityCheck::printIssues() {
@@ -86,10 +105,10 @@ bool IntegrityCheck::checkSig(const std::string& data, const std::vector<std::st
 	return false;
 }
 
-size_t IntegrityCheck::getFileDirCountInDir(const std::string& dir) {
+size_t IntegrityCheck::getFileDirCountInDir(const std::string& dir, std::function<bool(std::filesystem::directory_entry)> isIgnoredFn) {
 	auto dirIter = std::filesystem::recursive_directory_iterator(dir);
 	return std::count_if(std::filesystem::begin(dirIter), std::filesystem::end(dirIter),
-		[](const auto& file) {return file.is_regular_file() || file.is_directory(); });
+		[&](const auto& file) {return (file.is_regular_file() || file.is_directory()) && !isIgnoredFn(file); });
 }
 
 std::string IntegrityCheck::getRelativePath(std::string discordDir, std::string absolutePath) {
@@ -100,11 +119,24 @@ std::string IntegrityCheck::getRelativePath(std::string discordDir, std::string 
 
 void IntegrityCheck::checkModules(const std::string& discordDir) {
 	const std::string modulesDir = discordDir + "\\modules";
-	m_progressTotal += getFileDirCountInDir(modulesDir);
 
 	for (const auto& moduleDir : std::filesystem::directory_iterator(modulesDir)) {
 		if (moduleDir.is_directory()) {
+			const std::string modulePath = moduleDir.path().u8string();
+
 			size_t subDirCount = 0;
+
+			filehash moduleFileHash;
+
+			if (m_checkFilehash) {
+				std::string filename;
+				if (downloadDiscordHash(m_discordVersion, moduleDir.path().filename().u8string(), filename)) {
+					moduleFileHash = loadHashDump(filename);
+					m_progressTotal += getFileDirCountInDir(modulePath);
+				}
+				else
+					m_issues.push_back({ modulePath, "Unable to find hashes for this module!" });
+			}
 
 			for (const auto& moduleSubDir : std::filesystem::directory_iterator(moduleDir)) {
 				const std::string moduleName = moduleSubDir.path().filename().u8string();
@@ -112,9 +144,39 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 				//Check if the module dir contains the module name
 				if (moduleSubDir.is_directory()) {
 					if (moduleDir.path().filename().u8string().find(moduleName) == std::string::npos) {
-						m_issues.push_back({ moduleSubDir.path().u8string(), "Unexpected directory!" });
+						m_issues.push_back({ moduleSubDir.path().u8string(), "Unexpected directory! 0x2" });
 					}
 					else {
+						//Check hashes
+						if (m_checkFilehash && !moduleFileHash.empty()) {
+							for (const auto& file : std::filesystem::recursive_directory_iterator(modulePath)) {
+								if (file.is_directory()) {
+									std::string relativePath = getRelativePath(modulePath, file.path().u8string());
+
+									if (auto it = moduleFileHash.find(relativePath); it == moduleFileHash.end())
+										m_issues.push_back({ file.path().u8string(), "Unexpected directory! 0x3" });
+
+									m_progress++;
+								}
+								else if (file.is_regular_file()) {
+									std::string relativePath = getRelativePath(modulePath, file.path().u8string());
+
+									auto it = moduleFileHash.find(relativePath);
+									if (it == moduleFileHash.end()) {
+										m_issues.push_back({ file.path().u8string(), "Unexpected file! 0x2" });
+									}
+									else if (CryptoUtils::SimpleSHA256(getFileContent(file.path().u8string())) != it->second) {
+
+										g_logger.info(sf() << file.path().u8string() << "\n" << CryptoUtils::SimpleSHA256(getFileContent(file.path().u8string())) << "\n" << it->second);
+
+										m_issues.push_back({ file.path().u8string(), "Invalid hash!" });
+									}
+
+									m_progress++;
+								}
+							}
+						}
+
 						//Check the index
 						const std::string indexFile = moduleSubDir.path().u8string() + "\\index.js";
 
@@ -125,9 +187,8 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 						}
 						else {
 							if (fileContent != std::string(sf() << "module.exports = require(\'./" << moduleName << ".node\');\n")) {
-								if (!m_checkScripts) {
-									checkKnownSignatures(indexFile, fileContent);
-								}
+								
+								checkKnownSignatures(indexFile, fileContent);
 
 								//TODO find a way to check them?
 								static const std::vector<std::string> irregularModules = {
@@ -155,17 +216,16 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 					}
 				}
 				else if (moduleSubDir.is_regular_file()) {
-					m_issues.push_back({ moduleSubDir.path().u8string(), "Unexpected file!" });
+					m_issues.push_back({ moduleSubDir.path().u8string(), "Unexpected file! 0x3" });
 				}
 
-				subDirCount++;
+				if (subDirCount++ > 1) {
+					m_issues.push_back({ moduleSubDir.path().u8string(), sf() << "Too many subdirectories"});
+				}
 			}
-
-			m_progress++;
 		}
 		else if (moduleDir.is_regular_file()) {
-			m_issues.push_back({ moduleDir.path().u8string(), "Unexpected file!" });
-			m_progress++;
+			m_issues.push_back({ moduleDir.path().u8string(), "Unexpected file! 0x4" });
 		}
 	}
 }
@@ -209,13 +269,13 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 	for (const auto& file : std::filesystem::recursive_directory_iterator(ressourcesDir)) {
 		if (file.is_directory()) {
 			if (file.path().filename() != "bootstrap" && (!m_allowBetterDiscord || file.path().filename() != "app")) {
-				m_issues.push_back({ file.path().u8string(), "Unexpected directory!" });
+				m_issues.push_back({ file.path().u8string(), "Unexpected directory! 0x4" });
 			}
 			m_progress++;
 		}
 		else if (file.is_regular_file()) {
 			if (std::find(expectedFiles.begin(), expectedFiles.end(), file.path().u8string()) == expectedFiles.end()) {
-				m_issues.push_back({ file.path().u8string(), "Unexpected file!" });
+				m_issues.push_back({ file.path().u8string(), "Unexpected file! 0x5" });
 			}
 			else if (m_allowBetterDiscord) {
 				auto doubleBackslash = [](const std::string& content) {
@@ -250,7 +310,10 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 }
 
 void IntegrityCheck::dumpHashFiles(const std::string& dir, const std::string& outFilename) {
-	auto hashes = hashFilesinDir(dir);
+	dumpHashFiles(hashFilesinDir(dir), outFilename);
+}
+
+void IntegrityCheck::dumpHashFiles(const std::vector<std::pair<std::string, std::string>>& hashes, const std::string& outFilename) {
 	if (hashes.empty()) return;
 
 	std::ofstream dumpfile(outFilename);
@@ -281,12 +344,17 @@ IntegrityCheck::filehash IntegrityCheck::loadHashDump(const std::string& dumpFil
 	return output;
 }
 
-std::vector<std::pair<std::string, std::string>> IntegrityCheck::hashFilesinDir(const std::string& dir) {
+std::vector<std::pair<std::string, std::string>> IntegrityCheck::hashFilesinDir(
+	const std::string& dir,
+	std::function<bool(std::filesystem::directory_entry)> isIgnoredFn) {
+
 	if (dir.empty()) return {};
 
 	std::vector<std::pair<std::string, std::string>> output;
 
 	for (const auto& file : std::filesystem::recursive_directory_iterator(dir)) {
+		if (isIgnoredFn(file)) continue;
+
 		std::string filePath = getRelativePath(dir, file.path().u8string());
 
 		if (file.is_directory()) {
@@ -302,4 +370,58 @@ std::vector<std::pair<std::string, std::string>> IntegrityCheck::hashFilesinDir(
 	}
 
 	return output;
+}
+
+bool IntegrityCheck::downloadDiscordHash(const std::string& version, const std::string& moduleName, std::string& outFilename, bool overWrite) {
+	outFilename.clear();
+	outFilename = "cache\\" + version + "_" + moduleName + ".hash";
+
+	if (!overWrite && std::filesystem::exists(outFilename)) return true;
+
+	secure_string output;
+
+	//TODO sanitize version?
+	try {
+		cURL_get(HASH_URL + version + "/" + moduleName + ".hash", nullptr, output);
+
+		//TODO better check ?
+		if (output == "404: Not Found") throw std::runtime_error("version not hashed");
+
+		std::ofstream hashfile(outFilename, std::ios::binary);
+		hashfile << output;
+	}
+	catch (std::exception& e) {
+		g_logger.warning(sf() << "Failed to download discord hash : " << e.what());
+		return false;
+	}
+
+	return true;
+}
+
+bool IntegrityCheck::isFileIgnored(std::filesystem::directory_entry file) {
+	if (file.path().has_extension() &&
+		std::find(IGNORED_EXT.begin(), IGNORED_EXT.end(), file.path().extension().u8string()) != IGNORED_EXT.end()) return true;
+
+	//More condition?
+
+	return false;
+}
+
+void IntegrityCheck::dumpCurrentDiscordHashes(const std::string& discordDir, const std::string& version) {
+	const std::string modulesDir = discordDir + "\\modules";
+
+	if (!std::filesystem::exists(version)) {
+		std::filesystem::create_directory(version);
+	}
+
+	dumpHashFiles(hashFilesinDir(discordDir, [&modulesDir](std::filesystem::directory_entry file) {
+		//Ignore ignored files & modules directory
+		return isFileIgnored(file) || file.path().u8string().substr(0, modulesDir.size()) == modulesDir;
+	}), version + "\\main.hash");
+
+	for (const auto& file : std::filesystem::directory_iterator(modulesDir)) {
+		if (file.is_directory()) {
+			dumpHashFiles(hashFilesinDir(file.path().u8string()), version + "\\" + file.path().filename().u8string() + ".hash");
+		}
+	}
 }
