@@ -765,7 +765,7 @@ namespace Menu {
 				ConfigCheckbox("Check file hashes", integrity_checkhash);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will compare the file hashes of your Discord installation "
-				"with the known ones.");
+				"with the known ones. The hashes for your Discord version needs to be on the git repo.");
 
 				ConfigCheckbox("Check digital signature", integrity_checkexecutable);
 				ImGui::SameLine();
