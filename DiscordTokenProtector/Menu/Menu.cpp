@@ -776,9 +776,9 @@ namespace Menu {
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the NodeJS modules loaded by Discord");
 
-				ConfigCheckbox("Check ressources", integrity_checkressource);
+				ConfigCheckbox("Check resources", integrity_checkresource);
 				ImGui::SameLine();
-				ImGui::TextTooltip("(?)", "This will check the ressources scripts");
+				ImGui::TextTooltip("(?)", "This will check the resources scripts");
 
 				ConfigCheckbox("Check scripts", integrity_checkscripts);
 				ImGui::SameLine();

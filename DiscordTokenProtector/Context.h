@@ -265,7 +265,7 @@ private:
 					integrityCheck.setCheckHash(g_config->read<bool>("integrity_checkhash"));
 					integrityCheck.setCheckExecutableSig(g_config->read<bool>("integrity_checkexecutable"));
 					integrityCheck.setCheckModule(g_config->read<bool>("integrity_checkmodule"));
-					integrityCheck.setCheckResources(g_config->read<bool>("integrity_checkressource"));
+					integrityCheck.setCheckResources(g_config->read<bool>("integrity_checkresource"));
 					integrityCheck.setCheckScripts(g_config->read<bool>("integrity_checkscripts"));
 					integrityCheck.setAllowBetterDiscord(g_config->read<bool>("integrity_allowbetterdiscord"));
 

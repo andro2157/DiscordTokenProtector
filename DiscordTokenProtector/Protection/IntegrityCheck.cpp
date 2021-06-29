@@ -259,14 +259,14 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 		expectedFiles.push_back("app\\package.json");
 	}
 
-	const std::string ressourcesDir = discordDir + "\\resources";
+	const std::string resourcesDir = discordDir + "\\resources";
 
 	//Prepend the dir
-	for (auto& f : expectedFiles) f = ressourcesDir + "\\" + f;
+	for (auto& f : expectedFiles) f = resourcesDir + "\\" + f;
 
-	m_progressTotal += getFileDirCountInDir(ressourcesDir);
+	m_progressTotal += getFileDirCountInDir(resourcesDir);
 
-	for (const auto& file : std::filesystem::recursive_directory_iterator(ressourcesDir)) {
+	for (const auto& file : std::filesystem::recursive_directory_iterator(resourcesDir)) {
 		if (file.is_directory()) {
 			if (file.path().filename() != "bootstrap" && (!m_allowBetterDiscord || file.path().filename() != "app")) {
 				m_issues.push_back({ file.path().u8string(), "Unexpected directory! 0x4" });

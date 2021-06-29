@@ -12,7 +12,7 @@ static json getDefaultConfig() {
 	config["integrity_checkhash"] = true;
 	config["integrity_checkexecutable"] = true;
 	config["integrity_checkmodule"] = true;
-	config["integrity_checkressource"] = true;
+	config["integrity_checkresource"] = true;
 	config["integrity_checkscripts"] = true;
 	config["integrity_allowbetterdiscord"] = false;
 	config["iterations_key"] = 0;//TODO move to SecureKV?
