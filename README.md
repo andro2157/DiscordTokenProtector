@@ -13,7 +13,7 @@ But this will protect you against most (nearly every) token grabbers.
 
 ## Features
 
-#### ✅ Protects your self from most token grabbers
+#### ✅ Protect your self from most token grabbers
 #### ✅ Securely store your Discord token in an encrypted file
 #### ✅ Change your Discord password in one-click
 #### ✅ Check the integrity of your Discord installation on launch *(Coming soon)*
