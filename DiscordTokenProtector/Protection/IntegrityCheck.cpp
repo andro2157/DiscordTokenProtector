@@ -26,18 +26,16 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 		if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash) {
 			const std::string modulesDir = discordDir + "\\modules";
 
-			m_progressTotal += getFileDirCountInDir(discordDir, [&modulesDir](std::filesystem::directory_entry file) {
-				return isFileIgnored(file) || file.path().u8string().substr(0, modulesDir.size()) == modulesDir;//Repetitive
-			});
+			m_progressTotal += getFileDirCountInDir(discordDir, isFileIgnored);
 
 			for (const auto& file : std::filesystem::recursive_directory_iterator(discordDir)) {
 				if (isFileIgnored(file)) continue;
 
-				//Ignore files in modules, they are checked by checkModules
-				if (file.path().u8string().substr(0, modulesDir.size()) == modulesDir) continue;
+				//Ignore the hash check for modules, it's checked by checkModules
+				bool isModule = file.path().u8string().substr(0, modulesDir.size()) == modulesDir;
 
 				if (file.is_directory()) {
-					if (m_checkFilehash && !mainFileHash.empty()) {
+					if (!isModule && m_checkFilehash && !mainFileHash.empty()) {
 						std::string relativePath = getRelativePath(discordDir, file.path().u8string());
 
 						if (auto it = mainFileHash.find(relativePath); it == mainFileHash.end() &&
@@ -47,7 +45,7 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 					m_progress++;
 				}
 				else if (file.is_regular_file()) {
-					if (m_checkFilehash && !mainFileHash.empty()) {
+					if (!isModule && m_checkFilehash && !mainFileHash.empty()) {
 						std::string relativePath = getRelativePath(discordDir, file.path().u8string());
 
 						auto it = mainFileHash.find(relativePath);
@@ -60,11 +58,13 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 							m_issues.push_back({ file.path().u8string(), "Invalid hash!" });
 						}
 					}
+					
 					if (m_checkExecutableSignature && file.path().extension().u8string() == ".exe" || file.path().extension().u8string() == ".dll") {
 						if (!VerifyEmbeddedSignature(file.path().wstring().c_str())) {
 							m_issues.push_back({ file.path().u8string(), "Invalid digital signature!" });
 						}
 					}
+
 					if (m_checkScripts && file.path().extension().u8string() == ".js") {
 						checkKnownSignatures(file.path().u8string());
 					}
@@ -150,6 +150,8 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 						//Check hashes
 						if (m_checkFilehash && !moduleFileHash.empty()) {
 							for (const auto& file : std::filesystem::recursive_directory_iterator(modulePath)) {
+								if (isFileIgnored(file)) continue;
+
 								if (file.is_directory()) {
 									std::string relativePath = getRelativePath(modulePath, file.path().u8string());
 
@@ -166,9 +168,6 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 										m_issues.push_back({ file.path().u8string(), "Unexpected file! 0x2" });
 									}
 									else if (CryptoUtils::SimpleSHA256(getFileContent(file.path().u8string())) != it->second) {
-
-										g_logger.info(sf() << file.path().u8string() << "\n" << CryptoUtils::SimpleSHA256(getFileContent(file.path().u8string())) << "\n" << it->second);
-
 										m_issues.push_back({ file.path().u8string(), "Invalid hash!" });
 									}
 

@@ -19,7 +19,7 @@ namespace Signatures {
 
 constexpr auto HASH_URL = "https://raw.githubusercontent.com/andro2157/DiscordTokenProtector/master/DiscordHash/";
 
-const inline std::vector<std::string> IGNORED_EXT = {"log", "tmp"};
+const inline std::vector<std::string> IGNORED_EXT = {".log", ".tmp"};
 
 class IntegrityCheck {
 public:
