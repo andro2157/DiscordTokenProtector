@@ -9,7 +9,7 @@
 #pragma comment(lib, "advapi32.lib")
 
 #include <iostream>
-#include "Crypto/Crypto.h"
+#include "../Crypto/Crypto.h"
 
 //https://stackoverflow.com/a/36401787/13544464
 inline size_t CurlWrite_CallbackFunc_SecureString(void* contents, size_t size, size_t nmemb, secure_string* s) {

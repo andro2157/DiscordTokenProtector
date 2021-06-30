@@ -4,6 +4,7 @@
 #include "Storage/SecureKV.h"
 #include "Protection/FolderRemover.h"
 #include "Protection/ProcessProtection.h"
+#include "Protection/IntegrityCheck.h"
 #include "Network/NetworkManager.h"
 
 enum class State {
@@ -19,6 +20,9 @@ enum class State {
 
 enum class ProtectionStates {
 	Idle,
+	Starting,
+	Checking,
+	CheckIssues,
 	Injecting,
 	Connected,
 	Stop
@@ -156,6 +160,8 @@ public:
 	FolderRemover remover_canary_LocalStorage;
 	FolderRemover remover_canary_SessionStorage;
 
+	IntegrityCheck integrityCheck;
+
 	bool m_running = false;
 	std::mutex m_threadMutex;
 
@@ -244,13 +250,42 @@ private:
 					discordType = DiscordType::Discord;
 				}
 
-				m_protectionState = ProtectionStates::Injecting;
+				m_protectionState = ProtectionStates::Starting;
 
 				stopRemovers();
 
 				Discord::killDiscord();
 				remover_LocalStorage.Remove();
 				remover_canary_LocalStorage.Remove();
+
+				//Check before launching!
+				if (g_config->read<bool>("integrity")) {
+					m_protectionState = ProtectionStates::Checking;
+
+					integrityCheck.setCheckHash(g_config->read<bool>("integrity_checkhash"));
+					integrityCheck.setCheckExecutableSig(g_config->read<bool>("integrity_checkexecutable"));
+					integrityCheck.setCheckModule(g_config->read<bool>("integrity_checkmodule"));
+					integrityCheck.setCheckResources(g_config->read<bool>("integrity_checkresource"));
+					integrityCheck.setCheckScripts(g_config->read<bool>("integrity_checkscripts"));
+					integrityCheck.setAllowBetterDiscord(g_config->read<bool>("integrity_allowbetterdiscord"));
+
+					integrityCheck.setDiscordVersion(g_discord->getDiscordVersion(discordType));
+
+					if (!integrityCheck.check(ws2s(g_discord->getDiscordPath(discordType)))) {
+						m_protectionState = ProtectionStates::CheckIssues;
+
+						//Wait for the user...
+						while (m_protectionState == ProtectionStates::CheckIssues) {
+							std::this_thread::sleep_for(std::chrono::milliseconds(100));
+						}
+
+						//Cancel!
+						if (m_protectionState == ProtectionStates::Stop)
+							continue;
+					}
+				}
+
+				m_protectionState = ProtectionStates::Injecting;
 
 				PROCESS_INFORMATION discordProcess = g_discord->startSuspendedDiscord(discordType);//TODO CloseHandle?
 				//g_processprotection->ProtectProcess(discordProcess.hProcess);//TODO Fix

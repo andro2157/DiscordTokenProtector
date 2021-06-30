@@ -3,6 +3,8 @@
 #include <iostream>
 #include <random>
 #include <future>
+#include <fstream>
+#include <string>
 #include <Windows.h>
 #include "shlobj.h"
 
@@ -25,6 +27,14 @@ private:
     std::future<void> m_async;
     bool m_isRunning = false;
 };
+
+inline std::string getFileContent(const std::string& filename) {
+    std::ifstream fileStream(filename);
+    if (fileStream.is_open()) {
+        return std::string((std::istreambuf_iterator<char>(fileStream)), std::istreambuf_iterator<char>());
+    }
+    return std::string();
+}
 
 template<class T>
 inline void removeTaillingNulls(T& data) {

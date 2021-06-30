@@ -11,6 +11,10 @@
 FrameRateLimiter g_fpslimit(FPS_MAX);
 
 namespace Menu {
+#define ConfigCheckbox(ui_name, config_name)\
+	static bool checkbox_##config_name## = g_config->read<bool>(#config_name);\
+	if (ImGui::Checkbox(ui_name, &checkbox_##config_name##)) g_config->write<bool>(#config_name, checkbox_##config_name##);
+
 	ImFont* largeFont = nullptr;
 	ImFont* smallFont = nullptr;
 	ImFont* monospaceFont = nullptr;
@@ -549,37 +553,73 @@ namespace Menu {
 
 			ImGui::NewLine();
 
-			if (g_context.m_running)
-				ImGui::Text("Current status : %s", 
-					(g_context.m_protectionState == ProtectionStates::Idle) ? "Waiting for Discord..." :
-					(g_context.m_protectionState == ProtectionStates::Injecting) ? "Injecting payload..." : 
-					(g_context.m_protectionState == ProtectionStates::Connected) ? "Connected" : "Unknown");
-
-			ImGui::NewLine();
-
 			if (g_context.m_running) {
-				if (ImGui::Button("Stop", ImVec2(100, 50))) g_context.stopProtection();
-				if (g_context.m_protectionState == ProtectionStates::Idle) {
+				if (g_context.m_protectionState == ProtectionStates::Checking) {
+					ImGui::Text("Current status : Checking the integrity of Discord. (%d/%d)",
+						g_context.integrityCheck.getProgress(), g_context.integrityCheck.getProgressTotal());
+
+					ImGui::ProgressBar(
+						static_cast<float>(g_context.integrityCheck.getProgress()) / static_cast<float>(g_context.integrityCheck.getProgressTotal())
+					);
+				}
+				else if (g_context.m_protectionState == ProtectionStates::CheckIssues) {
+					auto issues = g_context.integrityCheck.getIssues();
+					ImGui::Text("Current status : Found %d issues!", issues.size());
+
+					if (ImGui::BeginChild("##ISSUES", ImVec2(0, 100), true, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+						ImGui::Columns(2);
+						ImGui::PushFont(smallFont);
+						for (const auto& issue : issues) {
+							ImGui::TextWrapped(issue.first.c_str());
+							ImGui::NextColumn();
+							ImGui::TextWrapped(issue.second.c_str());
+							ImGui::NextColumn();
+						}
+						ImGui::PopFont();
+						ImGui::Columns(1);
+
+						ImGui::EndChild();
+					}
+
+					if (ImGui::Button("Ignore, start anyway")) {
+						g_context.m_protectionState = ProtectionStates::Injecting;
+					}
 					ImGui::SameLine();
-					if (ImGui::Button("Start Discord", ImVec2(150, 50))) {
-						g_discord->startSuspendedDiscord(DiscordType::Discord);
+					if (ImGui::Button("Stop Discord launch")) {
+						g_context.m_protectionState = ProtectionStates::Stop;
 					}
 				}
+				else {
+					ImGui::Text("Current status : %s",
+						(g_context.m_protectionState == ProtectionStates::Idle) ? "Waiting for Discord..." :
+						(g_context.m_protectionState == ProtectionStates::Starting) ? "Starting..." :
+						(g_context.m_protectionState == ProtectionStates::Injecting) ? "Injecting payload..." :
+						(g_context.m_protectionState == ProtectionStates::Connected) ? "Connected" : "Unknown");
+				}
 			}
-			else {
-				if (ImGui::Button("Start", ImVec2(100, 50))) g_context.startProtection();
+				
+
+			ImGui::NewLine();
+
+			if (g_context.m_protectionState != ProtectionStates::CheckIssues) {
+				if (g_context.m_running) {
+					if (ImGui::Button("Stop", ImVec2(100, 50))) g_context.stopProtection();//TODO make this async
+					if (g_context.m_protectionState == ProtectionStates::Idle) {
+						ImGui::SameLine();
+						if (ImGui::Button("Start Discord", ImVec2(150, 50))) {
+							g_discord->startSuspendedDiscord(DiscordType::Discord);
+						}
+					}
+				}
+				else {
+					if (ImGui::Button("Start", ImVec2(100, 50))) g_context.startProtection();//TODO make this async
+				}
 			}
 
 			ImGui::NewLine();
 
-			static bool autoStart = g_config->read<bool>("auto_start");
-			static bool autoStartDiscord = g_config->read<bool>("auto_start_discord");
-			if (ImGui::Checkbox("Auto start Protection", &autoStart)) {
-				g_config->write<bool>("auto_start", autoStart);
-			}
-			if (ImGui::Checkbox("Auto start Discord", &autoStartDiscord)) {
-				g_config->write<bool>("auto_start_discord", autoStartDiscord);
-			}
+			ConfigCheckbox("Auto start Protection", auto_start);
+			ConfigCheckbox("Auto start Discord", auto_start_discord);
 
 			ImGui::EndChild();
 		}
@@ -718,6 +758,39 @@ namespace Menu {
 
 	void SettingsTab() {
 		if (ImGui::BeginChild("SettingsTab")) {
+			if (ImGui::CollapsingHeader("Integrity Check")) {
+				ImGui::TextWrapped("Checks the integrity of the Discord installation before launching it.");
+				ConfigCheckbox("Enable integrity check", integrity);
+
+				ConfigCheckbox("Check file hashes", integrity_checkhash);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "This will compare the file hashes of your Discord installation "
+				"with the known ones. The hashes for your Discord version needs to be on the git repo.");
+
+				ConfigCheckbox("Check digital signature", integrity_checkexecutable);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "This will check the digital signature of every executable files "
+				"(.exe and .dll)");
+
+				ConfigCheckbox("Check modules", integrity_checkmodule);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "This will check the NodeJS modules loaded by Discord");
+
+				ConfigCheckbox("Check resources", integrity_checkresource);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "This will check the resources scripts");
+
+				ConfigCheckbox("Check scripts", integrity_checkscripts);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
+
+				ConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
+			}
+
+			ImGui::NewLine();
+			ImGui::Separator();
+			ImGui::NewLine();
+
 			ImGui::Text("Current encryption mode: %s", 
 				(g_context.kd.type == EncryptionType::HWID) ? "HWID" :
 				(g_context.kd.type == EncryptionType::Password) ? "Password" :
@@ -820,9 +893,7 @@ namespace Menu {
 			}
 
 			ImGui::NewLine();
-
 			ImGui::Separator();
-
 			ImGui::NewLine();
 
 #if defined(_PROD) && !defined(DISABLE_AUTOSTART)

@@ -5,6 +5,8 @@
 #include <string>
 #include <streambuf>
 #include <chrono>
+#include <map>
+#include <functional>
 
 #include <filesystem>
 
@@ -24,7 +26,7 @@ __forceinline void FATALERROR_STR(std::string str) {
 	FATALERROR(str.c_str());
 }
 
-#define VER "dev-5"
+#define VER "dev-6"
 
 //The autostart gets flagged by some AV haha
 //#define DISABLE_AUTOSTART

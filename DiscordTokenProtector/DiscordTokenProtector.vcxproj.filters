@@ -120,6 +120,9 @@
     <ClCompile Include="Menu\ImGuiAddon.cpp">
       <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
+    <ClCompile Include="Protection\IntegrityCheck.cpp">
+      <Filter>Fichiers sources\Protection</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes.h">
@@ -796,6 +799,9 @@
     </ClInclude>
     <ClInclude Include="Menu\ImGuiAddon.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Protection\IntegrityCheck.h">
+      <Filter>Fichiers d%27en-tête\Protection</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
