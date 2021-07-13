@@ -59,8 +59,6 @@ These activities are suspicious for AVs. I provided builds without the auto-star
 
 * DiscordTokenProtector doesn't seem to work well on Windows 7
 
-* This won't protect you from grabbers that injects scripts into Discord.
-
 ## Compilation
 
 To compile this you'll need to include these following libraries:
