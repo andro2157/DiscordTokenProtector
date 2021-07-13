@@ -69,6 +69,7 @@ To compile this you'll need to include these following libraries:
   * [ImGui](https://github.com/ocornut/imgui) (Already included in the repo)
   * [Nlohmann's JSON](https://github.com/nlohmann/json) (Also included)
   * [CryptoPP](https://www.cryptopp.com/#download)
+  * [CUrl](https://curl.se/download.html)
 - For the payload:
   * [Nlohmann's JSON](https://github.com/nlohmann/json) (Included)
   * [Polyhook v2](https://github.com/stevemk14ebr/PolyHook_2_0)
@@ -82,3 +83,4 @@ To compile this you'll need to include these following libraries:
 * Nlohmann for the [JSON lib](https://github.com/nlohmann/json)
 * [CryptoPP](https://www.cryptopp.com/)
 * Stevemk14ebr for [Polyhook v2](https://github.com/stevemk14ebr/PolyHook_2_0)
+* [CUrl](https://curl.se/)
