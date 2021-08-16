@@ -1,7 +1,7 @@
 #pragma once
 #include "../Includes.h"
-#include "../Lib/imgui/imgui.h"
-#include "../Lib/imgui/imgui_internal.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace ImGui {
 	//https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp#L158

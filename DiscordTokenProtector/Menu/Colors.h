@@ -1,6 +1,6 @@
 #pragma once
 #include "../Includes.h"
-#include "../Lib/imgui/imgui.h"
+#include <imgui.h>
 
 namespace Colors {
 	inline const ImVec4 getColorFromHex(const uint32_t hex) {

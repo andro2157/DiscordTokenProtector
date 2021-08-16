@@ -1,7 +1,8 @@
 #pragma once
 #include "../Includes.h"
-#include "../Lib/json.hpp"
 #include "../Utils/Utils.h"
+
+#include <nlohmann/json.hpp>
 
 constexpr auto CONFIG_PATH = /*%APPDATA%*/L"\\DiscordTokenProtector\\";
 constexpr auto CONFIG_FILENAME = L"config.json";

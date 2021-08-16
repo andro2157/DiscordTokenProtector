@@ -7,7 +7,8 @@
 #include "Protection/FileCert.h"
 #include "Utils/CurlUtils.h"
 #include "Utils/Utils.h"
-#include "Lib/json.hpp"
+
+#include <nlohmann/json.hpp>
 
 uintptr_t GetModuleBaseAddress(DWORD procId, const char* modName);
 uintptr_t GetProcAddressEx(HANDLE hProcess, DWORD pid, const char* module, const char* function);
