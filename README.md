@@ -23,13 +23,10 @@ But this will protect you against most (nearly every) token grabbers.
 
 ### Download the lastest release **[HERE](https://github.com/andro2157/DiscordTokenProtector/releases)**
 
-###### A better installation process will be made. This is temporary.
-
-* Extract the zip file anywhere
-* Start the install.bat
-* If an existing installation is detected, you can either remove it or update it. Else it will automatically install it in `%appdata%\DiscordTokenProtector`
-* Launch the "DiscordTokenProtector" shortcut included in the archive to start it.
-* **[Setting it up](Setup.md)**
+* Start DiscordTokenProtectorSetup.exe
+* Select between Normal and NoStartup installation
+* **[Set it up](Setup.md)**
+* Enjoy!
 
 ## What does it do?
 
@@ -61,16 +58,28 @@ These activities are suspicious for AVs. I provided builds without the auto-star
 
 ## Compilation
 
-To compile this you'll need to include these following libraries:
+To compile, it's recommended to use [vcpkg](https://github.com/microsoft/vcpkg) for the libraries
 
-- For the main app:
-  * [ImGui](https://github.com/ocornut/imgui) (Already included in the repo)
-  * [Nlohmann's JSON](https://github.com/nlohmann/json) (Also included)
-  * [CryptoPP](https://www.cryptopp.com/#download)
-  * [CUrl](https://curl.se/download.html)
-- For the payload:
-  * [Nlohmann's JSON](https://github.com/nlohmann/json) (Included)
-  * [Polyhook v2](https://github.com/stevemk14ebr/PolyHook_2_0)
+### Step 1: Installing vcpkg
+*You can skip this step if you already have it*
+```
+git clone https://github.com/microsoft/vcpkg
+cd vcpkg
+bootstrap-vcpkg.bat -disableMetrics
+```
+Start a new cmd as admin in the `vcpkg` folder and type:
+```
+vcpkg integrate install
+```
+
+### Step 2: Installing the libraries
+Copy and paste this (in the vcpkg directory if you don't have it in the PATH)
+```
+vcpkg install imgui:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[opengl3-gl3w-binding]:x86-windows-static imgui[win32-binding]:x86-windows-static nlohmann-json:x86-windows-static cryptopp:x86-windows-static curl:x86-windows-static polyhook2:x86-windows-static
+```
+
+### Step 3: Open the project in VS
+Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config.
 
 *Note : C++17 is required to compile.*
 
