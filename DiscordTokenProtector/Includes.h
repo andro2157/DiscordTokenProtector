@@ -28,5 +28,10 @@ __forceinline void FATALERROR_STR(std::string str) {
 
 #define VER "dev-6"
 
+#pragma comment(lib, "OpenGL32.lib")
+#pragma comment(lib, "cryptlib.lib")
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "Comctl32.lib")
+
 //The autostart gets flagged by some AV haha
 //#define DISABLE_AUTOSTART

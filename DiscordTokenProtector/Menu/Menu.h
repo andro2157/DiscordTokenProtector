@@ -4,13 +4,13 @@
 //Mostly from https://github.com/ocornut/imgui/blob/master/examples/example_glfw_opengl3/main.cpp
 #define GLFW_EXPOSE_NATIVE_WIN32
 
-#include "../Lib/imgui/imgui.h"
-#include "../Lib/imgui/imgui_impl_glfw.h"
-#include "../Lib/imgui/imgui_impl_opengl3.h"
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
-#include "../Lib/imgui/GL/gl3w.h"
-#include "../Lib/imgui/GLFW/glfw3.h"
-#include "../Lib/imgui/GLFW/glfw3native.h"
+#include <GL/gl3w.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 namespace Menu {
 	extern ImFont* largeFont;

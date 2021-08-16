@@ -158,6 +158,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PROD-NOSTARTUP|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <VcpkgTriplet>x86-windows-static</VcpkgTriplet>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <VcpkgTriplet>x86-windows-static</VcpkgTriplet>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='PROD|Win32'">
+    <VcpkgTriplet>x86-windows-static</VcpkgTriplet>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='PROD-NOSTARTUP|Win32'">
+    <VcpkgTriplet>x86-windows-static</VcpkgTriplet>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -170,7 +182,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3dll.lib;OpenGL32.lib;cryptlib.lib;crypt32.lib;Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\imgui\GLFW;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -191,7 +203,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3dll.lib;OpenGL32.lib;cryptlib.lib;crypt32.lib;Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\imgui\GLFW;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -212,7 +224,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3dll.lib;OpenGL32.lib;cryptlib.lib;crypt32.lib;Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\imgui\GLFW;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -233,7 +245,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3dll.lib;OpenGL32.lib;cryptlib.lib;crypt32.lib;Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\imgui\GLFW;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -305,14 +317,6 @@
     <ClCompile Include="DiscordTokenProtector.cpp" />
     <ClCompile Include="Crypto\Crypto.cpp" />
     <ClCompile Include="Protection\IntegrityCheck.cpp" />
-    <ClCompile Include="Lib\imgui\GL\gl3w.c" />
-    <ClCompile Include="Lib\imgui\imgui.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_demo.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_draw.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_impl_win32.cpp" />
-    <ClCompile Include="Lib\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Menu\ImGuiAddon.cpp" />
     <ClCompile Include="Menu\Menu.cpp" />
     <ClCompile Include="Storage\Config.cpp" />
@@ -324,217 +328,12 @@
     <ClCompile Include="Protection\ProcessProtection.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\libs\cryptopp\3way.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\adler32.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\adv_simd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\aes.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\aes_armv4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\algebra.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\algparam.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\allocate.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\arc4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\argnames.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\aria.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\arm_simd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\asn.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\authenc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\base32.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\base64.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\basecode.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\bench.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\blake2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\blowfish.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\blumshub.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\camellia.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cast.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cbcmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ccm.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\chacha.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\chachapoly.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cham.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\channels.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_align.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_asm.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_cpu.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_cxx.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_dll.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_int.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_misc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_ns.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_os.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\config_ver.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cpu.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\crc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\cryptlib.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\darn.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\default.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\des.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\dh.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\dh2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\dll.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\dmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\donna.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\donna_32.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\donna_64.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\donna_sse.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\drbg.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\dsa.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\eax.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ec2n.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\eccrypto.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ecp.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ecpoint.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\elgamal.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\emsa2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\eprecomp.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\esign.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\factory.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\fhmqv.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\files.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\filters.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\fips140.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\fltrimpl.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gcm.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gf256.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gf2n.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gf2_32.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gfpcrypt.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gost.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\gzip.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hashfwd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hc128.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hc256.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hex.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hight.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hkdf.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hmqv.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\hrtimer.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ida.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\idea.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\integer.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\iterhash.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\kalyna.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\keccak.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\lea.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\lubyrack.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\luc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\mars.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\md2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\md4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\md5.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\mdc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\mersenne.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\misc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\modarith.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\modes.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\modexppc.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\mqueue.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\mqv.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\naclite.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\nbtheory.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\nr.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\oaep.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\oids.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\osrng.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ossig.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\padlkrng.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\panama.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\pch.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\pkcspad.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\poly1305.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\polynomi.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ppc_simd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\pssr.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\pubkey.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\pwdbased.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\queue.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rabbit.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rabin.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\randpool.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rc2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rc5.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rc6.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rdrand.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\resource.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rijndael.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ripemd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rng.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rsa.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\rw.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\safer.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\salsa.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\scrypt.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\seal.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\secblock.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\secblockfwd.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\seckey.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\seed.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\serpent.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\serpentp.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sha.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sha1_armv4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sha256_armv4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sha3.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sha512_armv4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\shacal2.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\shake.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\shark.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\simeck.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\simon.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\simple.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\siphash.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\skipjack.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sm3.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sm4.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\smartptr.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\sosemanuk.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\speck.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\square.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\stdcpp.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\strciphr.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\tea.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\threefish.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\tiger.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\trap.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\trunhash.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\ttmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\tweetnacl.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\twofish.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\validate.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\vmac.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\wake.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\whrlpool.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\words.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\xed25519.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\xtr.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\xtrcrypt.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\xts.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\zdeflate.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\zinflate.h" />
-    <ClInclude Include="..\..\..\libs\cryptopp\zlib.h" />
     <ClInclude Include="Context.h" />
     <ClInclude Include="Crypto\Crypto.h" />
     <ClInclude Include="Crypto\CryptoUtils.h" />
     <ClInclude Include="Protection\IntegrityCheck.h" />
     <ClInclude Include="Menu\Colors.h" />
     <ClInclude Include="Menu\FrameRateLimiter.h" />
-    <ClInclude Include="Lib\imgui\GLFW\glfw3.h" />
-    <ClInclude Include="Lib\imgui\GLFW\glfw3native.h" />
-    <ClInclude Include="Lib\imgui\GL\gl3w.h" />
-    <ClInclude Include="Lib\imgui\GL\glcorearb.h" />
-    <ClInclude Include="Lib\imgui\imconfig.h" />
-    <ClInclude Include="Lib\imgui\imgui.h" />
-    <ClInclude Include="Lib\imgui\imgui_impl_glfw.h" />
-    <ClInclude Include="Lib\imgui\imgui_impl_opengl3.h" />
-    <ClInclude Include="Lib\imgui\imgui_impl_win32.h" />
-    <ClInclude Include="Lib\imgui\imgui_internal.h" />
-    <ClInclude Include="Lib\imgui\imstb_rectpack.h" />
-    <ClInclude Include="Lib\imgui\imstb_textedit.h" />
-    <ClInclude Include="Lib\imgui\imstb_truetype.h" />
-    <ClInclude Include="Lib\json.hpp" />
     <ClInclude Include="Menu\ImGuiAddon.h" />
     <ClInclude Include="Menu\Menu.h" />
     <ClInclude Include="resource.h" />
