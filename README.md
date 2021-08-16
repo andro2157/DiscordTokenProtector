@@ -86,7 +86,8 @@ git clone https://github.com/andro2157/DiscordTokenProtector
 
 ### Step 4: Open the project in VS
 Open `DiscordTokenProtector.sln`
-Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config.
+
+Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config in **x86**.
 
 *Note : C++17 is required to compile.*
 
