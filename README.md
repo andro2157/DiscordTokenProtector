@@ -78,7 +78,13 @@ Copy and paste this (in the vcpkg directory if you don't have it in the PATH)
 vcpkg install imgui:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[opengl3-gl3w-binding]:x86-windows-static imgui[win32-binding]:x86-windows-static nlohmann-json:x86-windows-static cryptopp:x86-windows-static curl:x86-windows-static polyhook2:x86-windows-static
 ```
 
-### Step 3: Open the project in VS
+### Step 3: Cloning DiscordTokenProtector
+```
+git clone https://github.com/andro2157/DiscordTokenProtector
+```
+
+### Step 4: Open the project in VS
+Open `DiscordTokenProtector.sln`
 Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config.
 
 *Note : C++17 is required to compile.*
