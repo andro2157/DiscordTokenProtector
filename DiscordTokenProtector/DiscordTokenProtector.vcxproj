@@ -128,23 +128,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\lib;$(ProjectDir)Lib\imgui\GLFW;$(ProjectDir)..\..\..\libs\cryptopp\Win32\Output\Release;$(LibraryPath)</LibraryPath>
-    <IncludePath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\include;$(ProjectDir)..\..\..\libs\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\include;$(ProjectDir)..\..\..\libs\;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\lib;$(ProjectDir)Lib\imgui\GLFW;$(ProjectDir)..\..\..\libs\cryptopp\Win32\Output\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PROD|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\include;$(ProjectDir)..\..\..\libs\;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\lib;$(ProjectDir)Lib\imgui\GLFW;$(ProjectDir)..\..\..\libs\cryptopp\Win32\Output\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PROD-NOSTARTUP|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\include;$(ProjectDir)..\..\..\libs\;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\curl-7.64.1\builds\libcurl-vc17-x86-release-static-ipv6-sspi-winssl\lib;$(ProjectDir)Lib\imgui\GLFW;$(ProjectDir)..\..\..\libs\cryptopp\Win32\Output\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
