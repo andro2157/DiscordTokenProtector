@@ -1,6 +1,8 @@
 # Discord Token Protector
 #### Protect your Discord token from malicious grabbers!
 
+![Main Workflow](https://github.com/andro2157/DiscordTokenProtector/actions/workflows/msbuild.yml/badge.svg)
+
 <p align="center">
   <img width="500" src="Assets/DiscordTokenProtectorUI.png">
 </p>
