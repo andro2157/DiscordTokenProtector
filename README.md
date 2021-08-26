@@ -58,6 +58,8 @@ These activities are suspicious for AVs. I provided builds without the auto-star
 
 * DiscordTokenProtector doesn't seem to work well on Windows 7
 
+* Integrity check hashes are uploaded manually, therefore you might get an error message saying that it's unable to get the hashes. Please open a ticket if it says so!
+
 ## Compilation
 
 To compile, it's recommended to use [vcpkg](https://github.com/microsoft/vcpkg) for the libraries
