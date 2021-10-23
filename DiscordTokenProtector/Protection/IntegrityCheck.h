@@ -53,8 +53,8 @@ public:
 	void setDiscordVersion(const std::string& version) { m_discordVersion = version; }
 	std::string getDiscordVersion() const { return m_discordVersion; }
 
-	size_t getProgress() const { return m_progress; }
-	size_t getProgressTotal() const { return m_progressTotal; }
+	uint32_t getProgress() const { return m_progress; }
+	uint32_t getProgressTotal() const { return m_progressTotal; }
 
 	void printIssues();
 
@@ -72,7 +72,7 @@ public:
 
 private:
 	static bool checkSig(const std::string& data, const std::vector<std::string>& sigs);	
-	static size_t getFileDirCountInDir(const std::string& dir,
+	static uint32_t getFileDirCountInDir(const std::string& dir,
 		std::function<bool(std::filesystem::directory_entry)> isIgnoredFn = [](std::filesystem::directory_entry file) {return false; });
 	static std::string getRelativePath(std::string discordDir, std::string absolutePath);
 	static bool isFileIgnored(std::filesystem::directory_entry file);
@@ -80,6 +80,8 @@ private:
 	void checkModules(const std::string& discordDir);
 	void checkKnownSignatures(const std::string& filename, const std::string& data = "");
 	void checkResources(const std::string& discordDir);
+
+	void setTotalFilesToCheck(const std::string& discordDir);
 
 	issues m_issues;
 
@@ -91,8 +93,8 @@ private:
 
 	bool m_allowBetterDiscord = false;
 
-	std::atomic_uint64_t m_progress = 0;
-	std::atomic_uint64_t m_progressTotal = 0;
+	std::atomic_uint32_t m_progress = 0;
+	std::atomic_uint32_t m_progressTotal = 0;
 
 	std::string m_discordVersion;
 };

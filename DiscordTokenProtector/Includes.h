@@ -26,7 +26,7 @@ __forceinline void FATALERROR_STR(std::string str) {
 	FATALERROR(str.c_str());
 }
 
-#define VER "dev-6"
+#define VER "dev-7"
 
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "crypt32.lib")

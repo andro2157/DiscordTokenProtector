@@ -8,7 +8,7 @@
 bool IntegrityCheck::check(const std::string& discordDir) {
 	m_issues.clear();
 	m_progress = 0;
-	m_progressTotal = 0;
+	setTotalFilesToCheck(discordDir);
 
 	try {
 		if (m_discordVersion.empty()) throw std::runtime_error("The Discord version is not set!");
@@ -25,8 +25,6 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 
 		if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash) {
 			const std::string modulesDir = discordDir + "\\modules";
-
-			m_progressTotal += getFileDirCountInDir(discordDir, isFileIgnored);
 
 			for (const auto& file : std::filesystem::recursive_directory_iterator(discordDir)) {
 				if (isFileIgnored(file)) continue;
@@ -105,7 +103,7 @@ bool IntegrityCheck::checkSig(const std::string& data, const std::vector<std::st
 	return false;
 }
 
-size_t IntegrityCheck::getFileDirCountInDir(const std::string& dir, std::function<bool(std::filesystem::directory_entry)> isIgnoredFn) {
+uint32_t IntegrityCheck::getFileDirCountInDir(const std::string& dir, std::function<bool(std::filesystem::directory_entry)> isIgnoredFn) {
 	auto dirIter = std::filesystem::recursive_directory_iterator(dir);
 	return std::count_if(std::filesystem::begin(dirIter), std::filesystem::end(dirIter),
 		[&](const auto& file) {return (file.is_regular_file() || file.is_directory()) && !isIgnoredFn(file); });
@@ -124,7 +122,7 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 		if (moduleDir.is_directory()) {
 			const std::string modulePath = moduleDir.path().u8string();
 
-			size_t subDirCount = 0;
+			uint32_t subDirCount = 0;
 
 			filehash moduleFileHash;
 
@@ -132,7 +130,6 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 				std::string filename;
 				if (downloadDiscordHash(m_discordVersion, moduleDir.path().filename().u8string(), filename)) {
 					moduleFileHash = loadHashDump(filename);
-					m_progressTotal += getFileDirCountInDir(modulePath);
 				}
 				else
 					m_issues.push_back({ modulePath, "Unable to find hashes for this module!" });
@@ -263,8 +260,6 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 	//Prepend the dir
 	for (auto& f : expectedFiles) f = resourcesDir + "\\" + f;
 
-	m_progressTotal += getFileDirCountInDir(resourcesDir);
-
 	for (const auto& file : std::filesystem::recursive_directory_iterator(resourcesDir)) {
 		if (file.is_directory()) {
 			if (file.path().filename() != "bootstrap" && (!m_allowBetterDiscord || file.path().filename() != "app")) {
@@ -305,6 +300,23 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 
 			m_progress++;
 		}
+	}
+}
+
+void IntegrityCheck::setTotalFilesToCheck(const std::string& discordDir) {
+	m_progressTotal = 0;
+
+	if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash)
+		m_progressTotal += getFileDirCountInDir(discordDir, isFileIgnored);
+	if (m_checkModules && m_checkFilehash) {
+		for (const auto& moduleDir : std::filesystem::directory_iterator(discordDir + "\\modules")) {
+			if (moduleDir.is_directory()) {
+				m_progressTotal += getFileDirCountInDir(moduleDir.path().u8string());
+			}
+		}
+	}
+	if (m_checkResources) {
+		m_progressTotal += getFileDirCountInDir(discordDir + "\\resources");
 	}
 }
 

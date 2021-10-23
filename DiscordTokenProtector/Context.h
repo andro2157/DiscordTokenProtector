@@ -63,8 +63,11 @@ public:
 			g_logger.warning("Tried to stop the protection when it\'s already stopped.");
 			return;
 		}
+
+		m_protectionState = ProtectionStates::Stop;
 		Discord::killDiscord();
 		m_running = false;
+
 		m_protectionThread.join();
 	}
 
@@ -146,6 +149,20 @@ public:
 #endif
 	}
 
+	std::string getCurrentStateString() {
+		static const std::map<ProtectionStates, std::string> stateStrings = {
+			{ProtectionStates::Idle, "Waiting for Discord..."},
+			{ProtectionStates::Starting, "Starting..."},
+			{ProtectionStates::Checking, "Checking the integrity of Discord."},
+			{ProtectionStates::CheckIssues, "Found issues."},
+			{ProtectionStates::Injecting, "Injecting payload..."},
+			{ProtectionStates::Connected, "Connected!"},
+			{ProtectionStates::Stop, "Stopping..."}
+		};
+
+		return stateStrings.find(m_protectionState)->second;
+	}
+
 	//TODO getter setter ?
 
 	State state = State::None;
@@ -162,7 +179,7 @@ public:
 
 	IntegrityCheck integrityCheck;
 
-	bool m_running = false;
+	std::atomic_bool m_running = false;
 	std::mutex m_threadMutex;
 
 	bool m_isAutoStarting = false;
@@ -179,6 +196,8 @@ private:
 		while (m_protectionState == ProtectionStates::Connected) {
 			try {
 				std::string msg = m_networkManager.Recv();
+				if (msg == "KeepAlive") continue;
+
 				json jsonMsg = json::parse(msg);
 
 				if (jsonMsg["code"] == "HANDOFF") {
@@ -251,8 +270,11 @@ private:
 				}
 
 				m_protectionState = ProtectionStates::Starting;
+				hasStartedDiscord = true;
 
 				stopRemovers();
+
+				if (m_protectionState == ProtectionStates::Stop) continue;
 
 				Discord::killDiscord();
 				remover_LocalStorage.Remove();
@@ -261,6 +283,7 @@ private:
 				//Check before launching!
 				if (g_config->read<bool>("integrity")) {
 					m_protectionState = ProtectionStates::Checking;
+					if (m_protectionState == ProtectionStates::Stop) continue;
 
 					integrityCheck.setCheckHash(g_config->read<bool>("integrity_checkhash"));
 					integrityCheck.setCheckExecutableSig(g_config->read<bool>("integrity_checkexecutable"));
@@ -285,6 +308,8 @@ private:
 					}
 				}
 
+				if (m_protectionState == ProtectionStates::Stop) continue;
+
 				m_protectionState = ProtectionStates::Injecting;
 
 				PROCESS_INFORMATION discordProcess = g_discord->startSuspendedDiscord(discordType);//TODO CloseHandle?
@@ -292,6 +317,8 @@ private:
 
 				//TODO make this thing async
 				try {
+					if (m_protectionState == ProtectionStates::Stop) continue;
+
 					std::promise<USHORT> portPromise;
 
 					auto start = std::async(std::launch::async, &NetworkManager::Start, &m_networkManager, std::ref(portPromise));
@@ -303,11 +330,13 @@ private:
 
 					std::cout << "Injected!" << std::endl;
 
+					if (m_protectionState == ProtectionStates::Stop) continue;
+
 					if (ResumeThread(discordProcess.hThread) == -1)
 						throw std::runtime_error(sf() << "Failed ResumeThread : " << GetLastError());
 
 					//Wait for the payload client
-					for (int i = 0; i < 60 * 10; i++) {//Wait 60 seconds
+					for (int i = 0; (i < 60 * 10 && m_protectionState != ProtectionStates::Stop); i++) {//Wait 60 seconds
 						if (start.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready)
 							break;
 					}
@@ -315,6 +344,8 @@ private:
 					if (start.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
 						throw std::exception(("Discord payload timeout!"));
 					}
+
+					if (m_protectionState == ProtectionStates::Stop) continue;
 
 					std::cout << "Finish!" << std::endl;
 
@@ -349,8 +380,6 @@ private:
 					if (m_networkHandlerThread.joinable()) m_networkHandlerThread.join();
 
 					m_networkHandlerThread = std::thread(&Context::networkHandler, this);
-
-					hasStartedDiscord = true;
 				}
 				catch (std::exception& e) {
 					g_logger.error(sf() << __FUNCSIG__ " : Failed to load payload : " << e.what());

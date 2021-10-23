@@ -18,9 +18,15 @@ public:
         if (m_isRunning) return;
 
         m_async = std::async(std::launch::async, m_fn);
+        m_isRunning = true;
     }
 
-    bool isRunning() const { return m_isRunning; }
+    bool isRunning() {
+        if (m_isRunning)
+            m_isRunning = m_async.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready;
+
+        return m_isRunning;
+    }
 
 private:
     std::function<void()> m_fn;

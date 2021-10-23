@@ -12,11 +12,11 @@ public:
 	}
 
 	inline void frameStart() {
-		double timeDelta = std::chrono::duration_cast<std::chrono::microseconds>(
+		uint64_t timeDelta = std::chrono::duration_cast<std::chrono::microseconds>(
 			std::chrono::steady_clock::now() - m_frameEndTime).count();
 
 		if (timeDelta < m_frameTime) {
-			std::this_thread::sleep_for(std::chrono::microseconds(static_cast<uint64_t>(m_frameTime - timeDelta)));
+			std::this_thread::sleep_for(std::chrono::microseconds(m_frameTime - timeDelta));
 		}
 	}
 
@@ -31,10 +31,10 @@ public:
 
 private:
 	inline void calcFrameTime() {
-		m_frameTime = 1.0 / static_cast<double>(m_frameRate) * 1e6;//in µs
+		m_frameTime = static_cast<uint64_t>(1.0 / static_cast<double>(m_frameRate) * 1e6);//in µs
 	}
 
 	uint64_t m_frameRate;
-	double m_frameTime;
+	uint64_t m_frameTime;
 	std::chrono::steady_clock::time_point m_frameEndTime;
 };
