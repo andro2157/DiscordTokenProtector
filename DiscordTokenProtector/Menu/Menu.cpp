@@ -8,6 +8,10 @@
 #include "shellapi.h"
 #include "../resource.h"
 
+//#include <shellscalingapi.h>
+//
+//#pragma comment(lib, "Shcore.lib")
+
 FrameRateLimiter g_fpslimit(FPS_MAX);
 
 namespace Menu {
@@ -54,6 +58,8 @@ namespace Menu {
 	}
 
 	void SetupWindow() {
+		//SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
 		glfwSetErrorCallback(glfw_error_callback);
 		if (!glfwInit()) {
 			FATALERROR("Failed to init GLFW!");
@@ -63,8 +69,9 @@ namespace Menu {
 		const char* glsl_version = "#version 130";
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+		//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
-		GLFWwindow* window = glfwCreateWindow(500, 375, "Discord Token Protector " VER, NULL, NULL);
+		GLFWwindow* window = glfwCreateWindow(600, 375, "Discord Token Protector " VER, NULL, NULL);
 		if (window == NULL)
 			return;
 		glfwMakeContextCurrent(window);
@@ -217,6 +224,8 @@ namespace Menu {
 			g_fpslimit.frameEnd();
 		}
 
+		stopAsync.wait();
+
 		//Remove tray icon
 		Shell_NotifyIconA(NIM_DELETE, &nid);
 		DestroyWindow(nid.hWnd);
@@ -278,6 +287,7 @@ namespace Menu {
 			g_context.kd.type = g_context.encryptionType_cache;
 			g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key);
 			g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv);
+			g_context.kd.encrypt();
 
 			secure_string token = g_secureKV->read("token", g_context.kd);
 			if (token.empty()) {
@@ -495,6 +505,7 @@ namespace Menu {
 
 					g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key, singleHashTime);
 					g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv, singleHashTime);
+					g_context.kd.encrypt();
 
 					//TODO add check if iterations == 0, (this shouldn't happen)
 
@@ -821,6 +832,10 @@ namespace Menu {
 				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
 
 				ConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
+
+				ConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "Discord file hashes will be redownloaded each time");
 			}
 
 			ImGui::NewLine();
@@ -900,6 +915,7 @@ namespace Menu {
 
 					g_secureKV->reencrypt(g_context.kd, newKeydata);
 					g_context.kd = newKeydata;
+					g_context.kd.encrypt();
 
 					MessageBoxA(NULL, "Successfully reencrypted!", "Success", MB_OK | MB_ICONINFORMATION);
 				});

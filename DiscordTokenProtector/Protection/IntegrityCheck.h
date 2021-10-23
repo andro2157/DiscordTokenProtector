@@ -50,6 +50,9 @@ public:
 	void setAllowBetterDiscord(const bool allow) { m_allowBetterDiscord = allow; }
 	bool isAllowingBetterDiscord() const { return m_allowBetterDiscord; }
 
+	void setRedownloadHashes(const bool redownload) { m_redownloadHashes = redownload; }
+	bool isRedownloadingHashes() const { return m_redownloadHashes; }
+
 	void setDiscordVersion(const std::string& version) { m_discordVersion = version; }
 	std::string getDiscordVersion() const { return m_discordVersion; }
 
@@ -92,6 +95,8 @@ private:
 	bool m_checkFilehash = false;
 
 	bool m_allowBetterDiscord = false;
+
+	bool m_redownloadHashes = false;
 
 	std::atomic_uint32_t m_progress = 0;
 	std::atomic_uint32_t m_progressTotal = 0;

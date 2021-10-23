@@ -169,7 +169,7 @@ public:
 	ProtectionStates m_protectionState = ProtectionStates::Idle;
 
 	EncryptionType encryptionType_cache = EncryptionType::Unknown;//TODO remove this
-	KeyData kd;//TODO THIS IS NOT SECURED! but we can't ask the users password all the time.
+	KeyData kd;
 
 	FolderRemover remover_LocalStorage;
 	FolderRemover remover_SessionStorage;
@@ -291,6 +291,7 @@ private:
 					integrityCheck.setCheckResources(g_config->read<bool>("integrity_checkresource"));
 					integrityCheck.setCheckScripts(g_config->read<bool>("integrity_checkscripts"));
 					integrityCheck.setAllowBetterDiscord(g_config->read<bool>("integrity_allowbetterdiscord"));
+					integrityCheck.setRedownloadHashes(g_config->read<bool>("integrity_redownloadhashes"));
 
 					integrityCheck.setDiscordVersion(g_discord->getDiscordVersion(discordType));
 

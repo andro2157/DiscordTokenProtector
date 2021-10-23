@@ -12,16 +12,16 @@ public:
 	SecureKV();
 	~SecureKV();
 
-	void write(const secure_string& key, const secure_string& value, const KeyData& keydata);
-	secure_string read(const secure_string& key, const KeyData& keydata);
+	void write(const secure_string& key, const secure_string& value, KeyData& keydata);
+	secure_string read(const secure_string& key, KeyData& keydata);
 
 	using KV = std::pair<secure_string, secure_string>;
 	using KVs = std::vector<KV>;
 
-	bool save(const KVs& content, const KeyData& keydata);
-	KVs load(const KeyData& keydata);
+	bool save(const KVs& content, KeyData& keydata);
+	KVs load(KeyData& keydata);
 
-	void reencrypt(const KeyData& oldKeydata, const KeyData& newKeydata);
+	void reencrypt(KeyData& oldKeydata, KeyData& newKeydata);
 
 	EncryptionType getEncryptionType();
 

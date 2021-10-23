@@ -17,7 +17,7 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 
 		if (m_checkFilehash) {
 			std::string filename;
-			if (downloadDiscordHash(m_discordVersion, "main", filename))
+			if (downloadDiscordHash(m_discordVersion, "main", filename, m_redownloadHashes))
 				mainFileHash = loadHashDump(filename);
 			else
 				m_issues.push_back({ discordDir, "Unable to get hashes for this version of Discord!" });
@@ -128,7 +128,7 @@ void IntegrityCheck::checkModules(const std::string& discordDir) {
 
 			if (m_checkFilehash) {
 				std::string filename;
-				if (downloadDiscordHash(m_discordVersion, moduleDir.path().filename().u8string(), filename)) {
+				if (downloadDiscordHash(m_discordVersion, moduleDir.path().filename().u8string(), filename, m_redownloadHashes)) {
 					moduleFileHash = loadHashDump(filename);
 				}
 				else

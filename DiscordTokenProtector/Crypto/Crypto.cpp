@@ -124,4 +124,17 @@ namespace Crypto {
 
 		return out;
 	}
+
+	void encryptSBB(CryptoPP::SecByteBlock& in) {
+		if (auto mod = in.size() % CRYPTPROTECTMEMORY_BLOCK_SIZE; mod != 0)
+			in.CleanGrow(in.size() + (CRYPTPROTECTMEMORY_BLOCK_SIZE - mod));
+
+		if (!CryptProtectMemory(in.data(), in.size(), CRYPTPROTECTMEMORY_SAME_PROCESS))
+			throw std::runtime_error(sf() << "CryptProtectMemory failed : " << GetLastError());
+	}
+
+	void decryptSBB(CryptoPP::SecByteBlock& in) {
+		if (!CryptUnprotectMemory(in.data(), in.size(), CRYPTPROTECTMEMORY_SAME_PROCESS))
+			throw std::runtime_error(sf() << "CryptProtectMemory failed : " << GetLastError());
+	}
 }

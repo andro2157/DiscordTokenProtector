@@ -22,4 +22,7 @@ namespace Crypto {
 
 	secure_string encryptHWID(const secure_string& content);
 	secure_string decryptHWID(const secure_string& content);
+
+	void encryptSBB(CryptoPP::SecByteBlock& in);
+	void decryptSBB(CryptoPP::SecByteBlock& in);
 }

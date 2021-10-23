@@ -28,6 +28,10 @@ public:
         return m_isRunning;
     }
 
+    void wait() {
+        m_async.wait();
+    }
+
 private:
     std::function<void()> m_fn;
     std::future<void> m_async;
