@@ -1,6 +1,6 @@
 #include "Hook.h"
 #include "Utils.h"
-#include "Lib/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include <unordered_map>
 #include <filesystem>

@@ -13,13 +13,20 @@ But this will protect you against most (nearly every) token grabbers.
 
 **Any targeted attack against DiscordTokenProtector can bypass this protection!**
 
+### ⚠️ Disclamer
+**DTP is not affiliated with Discord.**\
+**DTP is in NO way responsible for what can happen on your Discord account.**\
+**Chances of getting terminated using DTP are very low, but please keep in mind that using a thirdparty software is against Discord's TOS.**
+
 ## Features
 
 #### ✅ Protect your self from most token grabbers
-#### ✅ Securely store your Discord token in an encrypted file
+#### ✅ Securely store your Discord token in an encrypted file (YubiKeys* are supported)
 #### ✅ Change your Discord password in one-click
 #### ✅ Check the integrity of your Discord installation on launch (BetterDiscord is supported)
 #### ✅ Check scripts for known malwares *(eg AnarchyGrabber3)*
+
+**Except from YubiKey NEO*
 
 ## Installation / Update
 
@@ -93,6 +100,16 @@ Open `DiscordTokenProtector.sln`
 
 Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config in **x86**.
 
+### (Optional) Step 5: Compile with YubiKey support
+* Download the latest yubico-piv-tool source code here : https://developers.yubico.com/yubico-piv-tool/Releases/ \
+**Don't clone from the repo, it won't compile on Windows!**
+* Follow the instructions [here](https://github.com/Yubico/yubico-piv-tool#building-on-windows) to create the project.
+* Open the generated .sln file in Visual Studio.
+* Open the properties of the `ykpiv` project.
+* Go to `C++` > `Code Generation`, and change the `Runtime Library` from `Multi-threaded DLL (/MD)` to `Multi-threaded (/MT)`
+* Compile
+* By default, the `PROD-YUBI(-NOSTARTUP)` config will look for the library and the headers in `C:\Program Files (x86)\Yubico\Yubico PIV Tool\` (default installation path of the PIV tool). You can move them here or change the path in the DTP project properties.
+
 *Note : C++17 is required to compile.*
 
 ## Credit
@@ -103,3 +120,4 @@ Everything should be setup, you just need to compile it with the `PROD` or `PROD
 * [CryptoPP](https://www.cryptopp.com/)
 * Stevemk14ebr for [Polyhook v2](https://github.com/stevemk14ebr/PolyHook_2_0)
 * [CUrl](https://curl.se/)
+* [Yubico](https://www.yubico.com/) for YubiKeys and [yubico-piv-tool](https://github.com/Yubico/yubico-piv-tool)

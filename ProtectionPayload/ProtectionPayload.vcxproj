@@ -420,7 +420,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Hook.h" />
-    <ClInclude Include="Lib\json.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="Utils.h" />
