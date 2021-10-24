@@ -9,6 +9,7 @@ enum class EncryptionType {
 	HWID,
 	Password,
 	HWIDAndPassword,
+	Yubi,
 	Unknown
 };
 
@@ -66,6 +67,13 @@ namespace CryptoUtils {
 		}
 
 		return output;
+	}
+	inline CryptoPP::SecByteBlock randomSBB(size_t len) {
+		CryptoPP::SecByteBlock out(len);
+		CryptoPP::AutoSeededRandomPool rng;
+		rng.GenerateBlock(out.data(), len);
+
+		return out;
 	}
 	inline std::string toHex(const std::string& in) {
 		using namespace CryptoPP;

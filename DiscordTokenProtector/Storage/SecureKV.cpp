@@ -83,7 +83,7 @@ bool SecureKV::save(const KVs& content, KeyData& keydata) {
 
 		if (keydata.type == EncryptionType::HWID)
 			dump = Crypto::encryptHWID(dump);
-		else if (keydata.type == EncryptionType::Password)
+		else if (keydata.type == EncryptionType::Password || keydata.type == EncryptionType::Yubi)
 			dump = Crypto::encrypt(dump, keydata.key, keydata.iv);
 		else if (keydata.type == EncryptionType::HWIDAndPassword)
 			dump = Crypto::encrypt(Crypto::encryptHWID(dump), keydata.key, keydata.iv);
@@ -97,6 +97,8 @@ bool SecureKV::save(const KVs& content, KeyData& keydata) {
 			dump.insert(3, "\002");
 		else if (keydata.type == EncryptionType::HWIDAndPassword)
 			dump.insert(3, "\003");
+		else if (keydata.type == EncryptionType::Yubi)
+			dump.insert(3, "\004");
 
 		m_file.write(dump.data(), dump.size());
 		m_file << std::flush;
@@ -141,9 +143,10 @@ SecureKV::KVs SecureKV::load(KeyData& keydata) {
 				throw std::runtime_error("encryption type mismatch 0x01");
 			file_str = Crypto::decryptHWID(file_str);
 		}
-		else if (encryptionType == 0x02) {
-			if (keydata.type != EncryptionType::Password)
-				throw std::runtime_error("encryption type mismatch 0x02");
+		else if (encryptionType == 0x02 || encryptionType == 0x04) {
+			if ((encryptionType == 0x02 && keydata.type != EncryptionType::Password) ||
+				(encryptionType == 0x04 && keydata.type != EncryptionType::Yubi))
+				throw std::runtime_error(sf() << "encryption type mismatch 0x0" << encryptionType);
 			file_str = Crypto::decrypt(file_str, keydata.key, keydata.iv);
 		}
 		else if (encryptionType == 0x03) {
@@ -210,6 +213,7 @@ EncryptionType SecureKV::getEncryptionType() {
 	if (encryptionType == 0x01) return EncryptionType::HWID;
 	if (encryptionType == 0x02) return EncryptionType::Password;
 	if (encryptionType == 0x03) return EncryptionType::HWIDAndPassword;
+	if (encryptionType == 0x04) return EncryptionType::Yubi;
 	
 	return EncryptionType::Unknown;
 }

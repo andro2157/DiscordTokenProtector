@@ -100,7 +100,9 @@ public:
 			else {
 				kd = HWID_kd;
 				state = State::TokenSecure;
-				startProtection();
+
+				if (g_config->read<bool>("auto_start"))
+					startProtection();
 			}
 		}
 		else {

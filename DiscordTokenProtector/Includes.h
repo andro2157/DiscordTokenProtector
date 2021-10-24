@@ -34,3 +34,5 @@ __forceinline void FATALERROR_STR(std::string str) {
 
 //The autostart gets flagged by some AV haha
 //#define DISABLE_AUTOSTART
+
+//#define YUBIKEYSUPPORT
