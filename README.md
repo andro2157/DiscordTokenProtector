@@ -35,6 +35,7 @@ But this will protect you against most (nearly every) token grabbers.
 * Start DiscordTokenProtectorSetup.exe
 * Select between Normal and NoStartup installation
 * **[Set it up](Setup.md)**
+* ([YubiKey Setup Guide](YubiSetup.md))
 * Enjoy!
 
 ## What does it do?
