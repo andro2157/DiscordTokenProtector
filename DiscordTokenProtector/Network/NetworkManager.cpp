@@ -67,7 +67,9 @@ std::string NetworkManager::Recv() {
 		recvBytes == SOCKET_ERROR || recvBytes != sizeof(uint32_t)/*Let's hope that this last one never happens*/) {
 		throw std::runtime_error(sf() << __FUNCSIG__ " : Failed recv : " << recvBytes << " " << WSAGetLastError());
 	}
+#ifndef _PROD
 	g_logger.info(sf() << "Recv packet size : " << packetSize);
+#endif
 	std::string output;
 	output.resize(packetSize, '\000');
 	if (int recvBytes = recv(m_client, output.data(), packetSize, NULL);//Repetitive
@@ -77,7 +79,9 @@ std::string NetworkManager::Recv() {
 
 	if (!m_xorKey.empty()) output = xorStr(output);
 
+#ifndef _PROD
 	g_logger.info(sf() << "Received : " << output);
+#endif
 	return output;
 }
 

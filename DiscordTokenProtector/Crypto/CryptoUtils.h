@@ -9,6 +9,7 @@ enum class EncryptionType {
 	HWID,
 	Password,
 	HWIDAndPassword,
+	Yubi,
 	Unknown
 };
 
@@ -22,9 +23,32 @@ struct KeyData {
 		key.CleanNew(0);
 		iv.CleanNew(0);
 	}
+
+	bool isEncrypted = false;
+	
+	/*
+	Note: the size of key and iv won't be changed since they are should be multiples of CRYPTPROTECTMEMORY_BLOCK_SIZE (16)
+	*/
+	void encrypt() {
+		if (isEncrypted) return;
+
+		Crypto::encryptSBB(key);
+		Crypto::encryptSBB(iv);
+
+		isEncrypted = true;
+	}
+
+	void decrypt() {
+		if (!isEncrypted) return;
+
+		Crypto::decryptSBB(key);
+		Crypto::decryptSBB(iv);
+
+		isEncrypted = false;
+	}
 };
 
-static const KeyData HWID_kd({ EncryptionType::HWID, CryptoPP::SecByteBlock(), CryptoPP::SecByteBlock() });
+static KeyData HWID_kd({ EncryptionType::HWID, CryptoPP::SecByteBlock(16), CryptoPP::SecByteBlock(16) });
 
 namespace CryptoUtils {
 	constexpr auto ALPHANUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -43,6 +67,13 @@ namespace CryptoUtils {
 		}
 
 		return output;
+	}
+	inline CryptoPP::SecByteBlock randomSBB(size_t len) {
+		CryptoPP::SecByteBlock out(len);
+		CryptoPP::AutoSeededRandomPool rng;
+		rng.GenerateBlock(out.data(), len);
+
+		return out;
 	}
 	inline std::string toHex(const std::string& in) {
 		using namespace CryptoPP;

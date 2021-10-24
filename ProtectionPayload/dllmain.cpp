@@ -68,7 +68,8 @@ void MainThread() {
 	pfnNtResumeProcess(GetCurrentProcess());
 
 	while (/*!(GetAsyncKeyState(VK_DELETE) & 0x0001)*/1) {
-		Sleep(1000);
+		Sleep(10000);
+		server->Send("KeepAlive");
 	}
 
 	//It should never reach this

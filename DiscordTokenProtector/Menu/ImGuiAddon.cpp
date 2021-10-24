@@ -160,9 +160,9 @@ namespace ImGui {
 			(1267.0f + 533.0f) / _kIndeterminateLinearDuration,
 			0.1f, 0.0f, 0.45f, 1.0f);
 
-		const float t = g.Time;
+		const float t = static_cast<float>(g.Time);
 		const float speed = 0.5f;
-		const float animationValue = std::clamp(fmod(g.Time * speed, 1.1), 0.0, 1.0);
+		const float animationValue = std::clamp(fmod(static_cast<float>(g.Time) * speed, 1.1f), 0.0f, 1.0f);
 
 		const float x1 = size.x * line1Tail.transform(animationValue);
 		const float width1 = size.x * line1Head.transform(animationValue);

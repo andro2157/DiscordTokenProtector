@@ -364,3 +364,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /Final Release
+/PROD-YUBI
+/PROD-YUBI-NOSTARTUP
+/ProtectionPayload/PROD-YUBI
+/ProtectionPayload/PROD-YUBI-NOSTARTUP
+/DiscordTokenProtector/PROD-YUBI-NOSTARTUP
+/DiscordTokenProtector/PROD-YUBI

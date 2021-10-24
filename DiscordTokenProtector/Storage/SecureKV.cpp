@@ -36,7 +36,7 @@ void SecureKV::reopenFile(bool remove) {
 	openFile();
 }
 
-void SecureKV::write(const secure_string& key, const secure_string& value, const KeyData& keydata) {
+void SecureKV::write(const secure_string& key, const secure_string& value, KeyData& keydata) {
 	const std::lock_guard<std::mutex> lock(m_high_mutex);
 	KVs kvs = load(keydata);
 	auto i = std::find_if(kvs.begin(), kvs.end(), [&key](const KV& kv) {return kv.first == secure_string(key); });
@@ -50,7 +50,7 @@ void SecureKV::write(const secure_string& key, const secure_string& value, const
 	save(kvs, keydata);
 }
 
-secure_string SecureKV::read(const secure_string& key, const KeyData& keydata) {
+secure_string SecureKV::read(const secure_string& key, KeyData& keydata) {
 	const std::lock_guard<std::mutex> lock(m_high_mutex);
 	KVs kvs = load(keydata);
 	auto i = std::find_if(kvs.begin(), kvs.end(), [&key](const KV& kv) {
@@ -63,7 +63,7 @@ secure_string SecureKV::read(const secure_string& key, const KeyData& keydata) {
 	return i->second;
 }
 
-bool SecureKV::save(const KVs& content, const KeyData& keydata) {
+bool SecureKV::save(const KVs& content, KeyData& keydata) {
 	const std::lock_guard<std::mutex> lock(m_low_mutex);
 	reopenFile(true);
 
@@ -79,9 +79,11 @@ bool SecureKV::save(const KVs& content, const KeyData& keydata) {
 			dump += k + SECUREKV_DELIM + v + SECUREKV_DELIM;
 		}
 
+		keydata.decrypt();
+
 		if (keydata.type == EncryptionType::HWID)
 			dump = Crypto::encryptHWID(dump);
-		else if (keydata.type == EncryptionType::Password)
+		else if (keydata.type == EncryptionType::Password || keydata.type == EncryptionType::Yubi)
 			dump = Crypto::encrypt(dump, keydata.key, keydata.iv);
 		else if (keydata.type == EncryptionType::HWIDAndPassword)
 			dump = Crypto::encrypt(Crypto::encryptHWID(dump), keydata.key, keydata.iv);
@@ -95,19 +97,23 @@ bool SecureKV::save(const KVs& content, const KeyData& keydata) {
 			dump.insert(3, "\002");
 		else if (keydata.type == EncryptionType::HWIDAndPassword)
 			dump.insert(3, "\003");
+		else if (keydata.type == EncryptionType::Yubi)
+			dump.insert(3, "\004");
 
 		m_file.write(dump.data(), dump.size());
 		m_file << std::flush;
 	}
 	catch (std::exception& e) {
 		g_logger.error(sf() << "Failed to save secure : " << e.what());
+		keydata.encrypt();
 		return false;
 	}
 
+	keydata.encrypt();
 	return true;
 }
 
-SecureKV::KVs SecureKV::load(const KeyData& keydata) {
+SecureKV::KVs SecureKV::load(KeyData& keydata) {
 	const std::lock_guard<std::mutex> lock(m_low_mutex);
 
 	KVs out;
@@ -130,14 +136,17 @@ SecureKV::KVs SecureKV::load(const KeyData& keydata) {
 		int encryptionType = file_str[3];
 		file_str.erase(0, 4);
 
+		keydata.decrypt();
+
 		if (encryptionType == 0x01) {
 			if (keydata.type != EncryptionType::HWID)
 				throw std::runtime_error("encryption type mismatch 0x01");
 			file_str = Crypto::decryptHWID(file_str);
 		}
-		else if (encryptionType == 0x02) {
-			if (keydata.type != EncryptionType::Password)
-				throw std::runtime_error("encryption type mismatch 0x02");
+		else if (encryptionType == 0x02 || encryptionType == 0x04) {
+			if ((encryptionType == 0x02 && keydata.type != EncryptionType::Password) ||
+				(encryptionType == 0x04 && keydata.type != EncryptionType::Yubi))
+				throw std::runtime_error(sf() << "encryption type mismatch 0x0" << encryptionType);
 			file_str = Crypto::decrypt(file_str, keydata.key, keydata.iv);
 		}
 		else if (encryptionType == 0x03) {
@@ -172,13 +181,14 @@ SecureKV::KVs SecureKV::load(const KeyData& keydata) {
 	}
 	catch (std::exception& e) {
 		g_logger.error(sf() << "Failed to load secure : " << e.what());
+		keydata.encrypt();
 		return {};
 	}
-
+	keydata.encrypt();
 	return out;
 }
 
-void SecureKV::reencrypt(const KeyData& oldKeydata, const KeyData& newKeydata) {
+void SecureKV::reencrypt(KeyData& oldKeydata, KeyData& newKeydata) {
 	const std::lock_guard<std::mutex> lock(m_high_mutex);
 	KVs content = load(oldKeydata);
 	if (content.empty()) {
@@ -203,6 +213,7 @@ EncryptionType SecureKV::getEncryptionType() {
 	if (encryptionType == 0x01) return EncryptionType::HWID;
 	if (encryptionType == 0x02) return EncryptionType::Password;
 	if (encryptionType == 0x03) return EncryptionType::HWIDAndPassword;
+	if (encryptionType == 0x04) return EncryptionType::Yubi;
 	
 	return EncryptionType::Unknown;
 }

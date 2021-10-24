@@ -64,7 +64,7 @@ MAINICON                ICON                    "512x icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 1,0,0,0
- PRODUCTVERSION 0,0,0,4
+ PRODUCTVERSION 0,0,0,7
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -86,7 +86,7 @@ BEGIN
             VALUE "LegalCopyright", "Copyright (C) 2021"
             VALUE "OriginalFilename", "DiscordTokenProtector.exe"
             VALUE "ProductName", "Discord Token Protector"
-            VALUE "ProductVersion", "0.0.0.4"
+            VALUE "ProductVersion", "0.0.0.7"
         END
     END
     BLOCK "VarFileInfo"

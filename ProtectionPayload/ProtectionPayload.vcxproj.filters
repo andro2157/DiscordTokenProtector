@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Lib">
-      <UniqueIdentifier>{7d392ef7-ad81-445a-9a45-d391953cbc32}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -31,9 +28,6 @@
     </ClInclude>
     <ClInclude Include="Utils.h">
       <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Lib\json.hpp">
-      <Filter>Lib</Filter>
     </ClInclude>
     <ClInclude Include="Server.h">
       <Filter>Fichiers d%27en-tête</Filter>

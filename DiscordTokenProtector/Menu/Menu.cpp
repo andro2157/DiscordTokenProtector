@@ -8,6 +8,10 @@
 #include "shellapi.h"
 #include "../resource.h"
 
+//#include <shellscalingapi.h>
+//
+//#pragma comment(lib, "Shcore.lib")
+
 FrameRateLimiter g_fpslimit(FPS_MAX);
 
 namespace Menu {
@@ -24,6 +28,14 @@ namespace Menu {
 	HMENU trayMenu = NULL;
 
 	bool running = true;
+
+	EasyAsync stopAsync([]() {
+		g_context.stopProtection();
+	});
+
+	EasyAsync startAsync([]() {
+		g_context.startProtection();
+	});
 
 	LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -46,6 +58,8 @@ namespace Menu {
 	}
 
 	void SetupWindow() {
+		//SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
 		glfwSetErrorCallback(glfw_error_callback);
 		if (!glfwInit()) {
 			FATALERROR("Failed to init GLFW!");
@@ -55,8 +69,9 @@ namespace Menu {
 		const char* glsl_version = "#version 130";
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+		//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
-		GLFWwindow* window = glfwCreateWindow(500, 375, "Discord Token Protector " VER, NULL, NULL);
+		GLFWwindow* window = glfwCreateWindow(600, 375, "Discord Token Protector " VER, NULL, NULL);
 		if (window == NULL)
 			return;
 		glfwMakeContextCurrent(window);
@@ -209,7 +224,7 @@ namespace Menu {
 			g_fpslimit.frameEnd();
 		}
 
-		//traymsgThread.join();
+		stopAsync.wait();
 
 		//Remove tray icon
 		Shell_NotifyIconA(NIM_DELETE, &nid);
@@ -254,66 +269,152 @@ namespace Menu {
 
 		ImGui::NewLine();
 
-		ImGui::TextWrapped("Please enter the password of the container:");
-
 		static char passwordInput[256];//TODO FIX the password is still in the memory after the SecureZeroMemory.
-		bool enterUnlock = ImGui::InputText("##Password", passwordInput, 256, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+		static char pinInput[9];
+
+		bool enterUnlock = false;
+
+		//TODO merge with existing code
+#ifdef YUBIKEYSUPPORT
+		static std::unique_ptr<Crypto::Yubi> yk;
+		static std::string ykInitError;
+		static int ykRetries = 0;
+#endif
+		bool ykCanContinue = false;
+
+		if (g_context.encryptionType_cache == EncryptionType::HWIDAndPassword || g_context.encryptionType_cache == EncryptionType::Password) {
+			ImGui::TextWrapped("Please enter the password of the container:");
+
+			enterUnlock = ImGui::InputText("##Password", passwordInput, 256, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+		}
+#ifdef YUBIKEYSUPPORT
+		else if (g_context.encryptionType_cache == EncryptionType::Yubi) {
+			static EasyAsync ykDetectAsync([]() {
+				ykInitError.clear();
+				try {
+					yk = std::make_unique<Crypto::Yubi>();
+					ykRetries = yk->getRetryCount();
+				}
+				catch (std::exception& e) {
+					ykInitError = e.what();
+				}
+			}, true);
+
+			if (ykDetectAsync.isRunning()) {
+				ImGui::NewLine();
+				ImGui::Text("Searching YubiKey...");
+				ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
+			}
+			else {
+				if (ykInitError.empty() && yk) {
+					ImGui::TextWrapped("Found : %s", yk->getModelName().c_str());
+					ImGui::SameLine();
+					if (ImGui::Button("Refresh"))
+						ykDetectAsync.start();
+
+					enterUnlock = ImGui::InputText("PIV PIN", pinInput, 9, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+					if (ykRetries != -1)
+						ImGui::TextColored(Colors::Red, "Retries left : %d", ykRetries);
+
+					ykCanContinue = pinInput[0] != '\000';
+				}
+				else {
+					ImGui::NewLine();
+					ImGui::TextWrapped("Error : %s", ykInitError.c_str());
+					ImGui::TextWrapped("Please connect your YubiKey.");
+					if (ImGui::Button("Refresh"))
+						ykDetectAsync.start();
+				}
+			}
+		}
+#endif
 
 		ImGui::NewLine();
 
-		static std::future<void> asyncUnlock;
-		static bool unlocking = false;
+		static EasyAsync unlockAsync([]() {
+			secure_string password(passwordInput);
+#ifdef YUBIKEYSUPPORT
+			secure_string pin(pinInput);
+#endif
 
-		if (unlocking) {
+			SecureZeroMemory(passwordInput, 256);
+			SecureZeroMemory(pinInput, 9);
+
+#ifdef YUBIKEYSUPPORT
+			if (g_context.encryptionType_cache == EncryptionType::Yubi) {
+				try {
+					ykRetries = yk->authentificate(pin);
+					if (ykRetries != -1) {
+						MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+						return;
+					}
+
+					password = yk->signData(Crypto::Yubi::readKeyFile());
+				}
+				catch (std::exception& e) {
+					ykRetries = yk->getRetryCount();
+					MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+					return;
+				}
+			}
+#endif
+
+			uint32_t iterations_key = g_config->read<uint32_t>("iterations_key");
+			uint32_t iterations_iv = g_config->read<uint32_t>("iterations_iv");
+			//TODO add sanitary check of iterations
+
+			g_context.kd.type = g_context.encryptionType_cache;
+			g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key);
+			g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv);
+			g_context.kd.encrypt();
+
+			secure_string token = g_secureKV->read("token", g_context.kd);
+			if (token.empty()) {
+				g_context.kd.reset();
+				token.clear();
+
+				//TODO proper ImGui thing
+				MessageBoxA(NULL,
+					(g_context.encryptionType_cache == EncryptionType::Yubi)
+					? "Invalid YubiKey or corrupted message" :
+					(g_context.encryptionType_cache == EncryptionType::Password)
+					? "Invalid password" : "Invalid password or HWID",
+					"Discord Token Protector", MB_ICONSTOP | MB_OK);
+#ifdef YUBIKEYSUPPORT
+				if (g_context.encryptionType_cache == EncryptionType::Yubi)
+					ykRetries = yk->getRetryCount();
+#endif
+				return;
+			}
+			else if (Discord::getUserInfo(token).id.empty()) {
+				MessageBoxA(NULL, "The token is invalid and has been removed from DTP.\
+							Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
+				g_secureKV->reopenFile(true);//Reset
+				ExitProcess(0);
+			}
+			else {
+				g_context.state = State::TokenSecure;
+
+				//Clean the local storage and session storage (just in case)
+				g_context.remover_LocalStorage.Remove();
+				g_context.remover_SessionStorage.Remove();
+				g_context.remover_canary_LocalStorage.Remove();
+				g_context.remover_canary_SessionStorage.Remove();
+			}
+
+			if (g_config->read<bool>("auto_start"))
+				startAsync.start();
+		});
+
+		if (unlockAsync.isRunning()) {
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 			ImGui::Button("Unlocking...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
 			ImGui::PopItemFlag();
 			ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
 		}
-		else {
+		else if (g_context.encryptionType_cache != EncryptionType::Yubi || ykCanContinue) {
 			if (ImGui::Button("Unlock", ImVec2(ImGui::GetWindowWidth() - 30, 30)) || enterUnlock) {
-				asyncUnlock = std::async(std::launch::async, [](secure_string password) {
-					uint32_t iterations_key = g_config->read<uint32_t>("iterations_key");
-					uint32_t iterations_iv = g_config->read<uint32_t>("iterations_iv");
-					//TODO add sanitary check of iterations
-
-					g_context.kd.type = g_context.encryptionType_cache;
-					g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key);
-					g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv);
-
-					secure_string token = g_secureKV->read("token", g_context.kd);
-					if (token.empty()) {
-						g_context.kd.reset();
-						token.clear();
-
-						//TODO proper ImGui thing
-						MessageBoxA(NULL,
-							(g_context.kd.type == EncryptionType::Password)
-							? "Invalid password" : "Invalid password or HWID",
-							"Discord Token Protector", MB_ICONSTOP | MB_OK);
-					}
-					else if (Discord::getUserInfo(token).id.empty()) {
-						MessageBoxA(NULL, "The token is invalid. Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
-						g_secureKV->reopenFile(false);//Reset
-						ExitProcess(0);
-					}
-					else {
-						g_context.state = State::TokenSecure;
-
-						//Clean the local storage and session storage (just in case)
-						g_context.remover_LocalStorage.Remove();
-						g_context.remover_SessionStorage.Remove();
-						g_context.remover_canary_LocalStorage.Remove();
-						g_context.remover_canary_SessionStorage.Remove();
-					}
-
-					if (g_config->read<bool>("auto_start"))
-						g_context.startProtection();
-					unlocking = false;
-				}, secure_string(passwordInput));
-				SecureZeroMemory(passwordInput, 256);
-
-				unlocking = true;
+				unlockAsync.start();
 			}
 		}
 	}
@@ -353,6 +454,25 @@ namespace Menu {
 			return;
 		}
 
+		static bool discordAffiliationWarning = true;
+		if (discordAffiliationWarning) {
+			ImGui::TextColored(Colors::Red, "Disclamer");
+			ImGui::NewLine();
+
+			ImGui::TextWrapped("DTP is not affiliated with Discord.");
+			ImGui::TextWrapped("DTP is in NO way responsible for what can happen on your Discord account.");
+			ImGui::TextWrapped("Chances of getting terminated using DTP are very low, but"
+				"please keep in mind that using a thirdparty software is against Discord\'s TOS.");
+
+
+			ImGui::NewLine();
+
+			if (ImGui::Button("I understand", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+				discordAffiliationWarning = false;
+			}
+			return;
+		}
+
 		static Timer updateTimer;
 
 		if (g_context.state == State::NoToken) {
@@ -382,14 +502,14 @@ namespace Menu {
 		}
 		else if (g_context.state == State::DiscoveredToken) {
 			static DiscordUserInfo info;
-			static std::future<void> getInfoAsync = std::async(std::launch::async, []() {
+			static EasyAsync getInfoAsync([]() {
 				info = Discord::getUserInfo(Discord::getStoredToken(true));
-			});
+			}, true);
 
 			ImGui::TextWrapped("We found this account:");
 			ImGui::NewLine();
 
-			if (info.id.empty()) {
+			if (getInfoAsync.isRunning()) {
 				ImGui::Text("Getting user info...");
 			}
 			else {
@@ -404,7 +524,7 @@ namespace Menu {
 
 			ImGui::NewLine();
 
-			if (!info.id.empty()) {
+			if (!getInfoAsync.isRunning()) {
 				if (ImGui::Button("It\'s correct!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
 					g_context.state = State::MakeNewPassword;
 				}
@@ -412,22 +532,36 @@ namespace Menu {
 		}
 		else if (g_context.state == State::MakeNewPassword ||
 			g_context.encryptionType_cache == EncryptionType::Unknown) {
-			static bool done = false;
 			static int selectedEncryptionMode = 1;
 
 			static char passwordInput[256];
 			static char password2Input[256];
+			static char pinInput[9];
 
 			static float hashTime = 0.5f;
+
+#ifdef YUBIKEYSUPPORT
+			static std::unique_ptr<Crypto::Yubi> yk;
+			static std::string ykInitError;
+			static int ykRetries = 0;
+#endif
+			bool ykCanContinue = false;
 
 			auto reset = [&]() {
 				SecureZeroMemory(passwordInput, 256);
 				SecureZeroMemory(password2Input, 256);
+#ifdef YUBIKEYSUPPORT
+				SecureZeroMemory(pinInput, 9);
+#endif
 			};
 
 			ImGui::TextWrapped("Let\'s now setup the secure container that will store your token!\n"
 				"Please chose the mode:");
+#ifdef YUBIKEYSUPPORT
+			ImGui::Combo("Encryption Mode", &selectedEncryptionMode, "Password-less (HWID)\0Password\0Password + HWID\0YubiKey\0\0");
+#else
 			ImGui::Combo("Encryption Mode", &selectedEncryptionMode, "Password-less (HWID)\0Password\0Password + HWID\0\0");
+#endif		
 			if (selectedEncryptionMode == 0) {
 				ImGui::TextColored(Colors::Red, "Warning!");
 				ImGui::TextWrapped("This mode doesn\'t require a password, but the secure container can be easily "
@@ -435,7 +569,7 @@ namespace Menu {
 					"For example : a malware, someone accessing your pc, etc");
 				reset();
 			}
-			else if (selectedEncryptionMode > 0) {
+			else if (selectedEncryptionMode == 1 || selectedEncryptionMode == 2) {
 				ImGui::InputText("Password", passwordInput, 256, ImGuiInputTextFlags_Password);
 				ImGui::InputText("Confirm Password", password2Input, 256, ImGuiInputTextFlags_Password);
 				ImGui::SliderFloat("Hash Time", &hashTime, 0.1f, 3.0f, "%.2fs");
@@ -446,67 +580,155 @@ namespace Menu {
 				if (selectedEncryptionMode == 1)
 					ImGui::NewLine();
 			}
+#ifdef YUBIKEYSUPPORT
+			else if (selectedEncryptionMode == 3) {
+				static EasyAsync ykDetectAsync([]() {
+					ykInitError.clear();
+					try {
+						yk = std::make_unique<Crypto::Yubi>();
+						ykRetries = yk->getRetryCount();
+					}
+					catch (std::exception& e) {
+						ykInitError = e.what();
+					}
+				}, true);
+
+				if (ykDetectAsync.isRunning()) {
+					ImGui::NewLine();
+					ImGui::Text("Searching YubiKey...");
+					ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
+				}
+				else {
+					if (ykInitError.empty() && yk) {
+						ImGui::TextWrapped("Found : %s", yk->getModelName().c_str());
+						ImGui::SameLine();
+						if (ImGui::Button("Refresh"))
+							ykDetectAsync.start();
+
+						ImGui::TextWrapped("Please make sure you have a certificate in the card authentification slot!");
+						ImGui::SameLine();
+						ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentification certificate. "
+							"A random message signed with this certificate is going to be used as the encryption key. "
+							"A guide can be found on the Github repo.");
+
+						ImGui::InputText("PIV PIN", pinInput, 9, ImGuiInputTextFlags_Password);
+						ImGui::SameLine();
+						ImGui::TextTooltip("(?)", "This is the PIN used in PIV (Personal Identity Verification). "
+							"By default, it is \"123456\", we strongly recommend you updating it with the YubiKey Manager app. "
+							"THIS IS DIFFERENT FROM THE FIDO PIN!");
+
+						if (ykRetries != -1)
+							ImGui::TextColored(Colors::Red, "Retries left : %d", ykRetries);
+
+						ImGui::SliderFloat("Hash Time", &hashTime, 0.1f, 3.0f, "%.2fs");
+						ImGui::SameLine();
+						ImGui::TextTooltip("(?)", "This corresponds to the time taken to hash your password. "
+							"The longer it is, the more time it will take to unlock the container. But it\'ll "
+							"also make it more secure against bruteforcing.");
+
+						ykCanContinue = pinInput[0] != '\000';
+					}
+					else {
+						ImGui::NewLine();
+						ImGui::TextWrapped("Error : %s", ykInitError.c_str());
+						ImGui::TextWrapped("Please connect your YubiKey.");
+
+						if (ImGui::Button("Refresh"))
+							ykDetectAsync.start();
+					}
+				}
+			}
+#endif
 			if (selectedEncryptionMode == 0 || selectedEncryptionMode == 2) {
 				ImGui::TextWrapped("Please also keep in mind that, with the HWID one, "
 					"the container content will be lost if you change your "
 					"Windows user account, if you reinstall Windows, or if you change your computer.");
 			}
 
-			static std::future<void> asyncStoreToken;
 
-			if (done) {
+			static EasyAsync storeTokenAsync([&reset]() {
+				secure_string password(passwordInput);
+#ifdef YUBIKEYSUPPORT
+				secure_string pin(pinInput);
+#endif
+				reset();
+
+				if (selectedEncryptionMode == 0) {
+					g_context.kd = HWID_kd;
+				}
+				else {
+					if (selectedEncryptionMode == 1)
+						g_context.kd.type = EncryptionType::Password;
+					else if (selectedEncryptionMode == 2)
+						g_context.kd.type = EncryptionType::HWIDAndPassword;
+#ifdef YUBIKEYSUPPORT
+					else if (selectedEncryptionMode == 3) {
+						g_context.kd.type = EncryptionType::Yubi;
+						try {
+							ykRetries = yk->authentificate(pin);
+							if (ykRetries != -1) {
+								MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+								return;
+							}
+
+							password = yk->signData(Crypto::Yubi::generateKeyFile());
+						}
+						catch (std::exception& e) {
+							ykRetries = yk->getRetryCount();
+							MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							return;
+						}
+					}
+#endif
+
+					float singleHashTime = hashTime / 2;
+					uint32_t iterations_key = 0;
+					uint32_t iterations_iv = 0;
+
+					g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key, singleHashTime);
+					g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv, singleHashTime);
+					g_context.kd.encrypt();
+
+					//TODO add check if iterations == 0, (this shouldn't happen)
+
+					g_config->write("iterations_key", iterations_key);
+					g_config->write("iterations_iv", iterations_iv);
+				}
+
+				g_secureKV->write("token", Discord::getStoredToken(false), g_context.kd);
+
+				//Clean the local storage and session storage
+				g_context.remover_canary_LocalStorage.Remove();
+				g_context.remover_canary_SessionStorage.Remove();
+
+				//Finished setup
+				g_context.state = State::TokenSecure;
+				startAsync.start();
+			});
+
+			if (storeTokenAsync.isRunning()) {
 				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 				ImGui::Button("Encrypting...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
 				ImGui::PopItemFlag();
 				ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
 			}
 			else {
-				if (ImGui::Button("Continue", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
-					if (selectedEncryptionMode != 0 && strcmp(passwordInput, password2Input) != 0) {
-						//TODO proper thing in ImGui
-						MessageBoxA(NULL, "Passwords aren\'t identical.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+				if (selectedEncryptionMode != 3 || ykCanContinue) {
+					if (ImGui::Button("Continue", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+						const bool passwordBasedEncryption = selectedEncryptionMode == 1 || selectedEncryptionMode == 2;
+						if (passwordBasedEncryption && strcmp(passwordInput, password2Input) != 0) {
+							//TODO proper thing in ImGui
+							MessageBoxA(NULL, "Passwords aren\'t identical.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							reset();
+						}
+						else if (passwordBasedEncryption && strlen(passwordInput) < 6) {//TODO change?
+							MessageBoxA(NULL, "The password must have at least 6 characters.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							reset();
+						}
+						else {
+							storeTokenAsync.start();
+						}
 					}
-					else if (selectedEncryptionMode != 0 && strlen(passwordInput) < 6) {//TODO change?
-						MessageBoxA(NULL, "The password must have at least 6 characters.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
-					}
-					else {
-						asyncStoreToken = std::async(std::launch::async, [](secure_string password) {
-							if (selectedEncryptionMode == 0) {
-								g_context.kd = HWID_kd;
-							}
-							else {
-								if (selectedEncryptionMode == 1)
-									g_context.kd.type = EncryptionType::Password;
-								if (selectedEncryptionMode == 2)
-									g_context.kd.type = EncryptionType::HWIDAndPassword;
-
-								float singleHashTime = hashTime / 2;
-								uint32_t iterations_key = 0;
-								uint32_t iterations_iv = 0;
-
-								g_context.kd.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key, singleHashTime);
-								g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv, singleHashTime);
-
-								//TODO add check if iterations == 0, (this shouldn't happen)
-
-								g_config->write("iterations_key", iterations_key);
-								g_config->write("iterations_iv", iterations_iv);
-							}
-
-							g_secureKV->write("token", Discord::getStoredToken(false), g_context.kd);
-
-							//Clean the local storage and session storage
-							g_context.remover_canary_LocalStorage.Remove();
-							g_context.remover_canary_SessionStorage.Remove();
-
-							//Finished setup
-							g_context.state = State::TokenSecure;
-							g_context.startProtection();
-							done = false;
-						}, secure_string(passwordInput));
-						done = true;
-					}
-					reset();
 				}
 			}
 		}
@@ -590,20 +812,27 @@ namespace Menu {
 					}
 				}
 				else {
-					ImGui::Text("Current status : %s",
-						(g_context.m_protectionState == ProtectionStates::Idle) ? "Waiting for Discord..." :
-						(g_context.m_protectionState == ProtectionStates::Starting) ? "Starting..." :
-						(g_context.m_protectionState == ProtectionStates::Injecting) ? "Injecting payload..." :
-						(g_context.m_protectionState == ProtectionStates::Connected) ? "Connected" : "Unknown");
+					ImGui::Text("Current status : %s", g_context.getCurrentStateString().c_str());
 				}
 			}
-				
-
+			
 			ImGui::NewLine();
 
 			if (g_context.m_protectionState != ProtectionStates::CheckIssues) {
-				if (g_context.m_running) {
-					if (ImGui::Button("Stop", ImVec2(100, 50))) g_context.stopProtection();//TODO make this async
+				if (startAsync.isRunning()) {
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::Button("Starting...", ImVec2(100, 50));
+					ImGui::PopItemFlag();
+					ImGui::LinearIndeterminateBar("startprogress", ImVec2(108, 10));
+				} else if (stopAsync.isRunning()) {//startAsync & stopAsync shouldn't be running at the same time
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::Button("Stopping...", ImVec2(100, 50));
+					ImGui::PopItemFlag();
+					ImGui::LinearIndeterminateBar("stopprogress", ImVec2(108, 10));
+				}
+				else if (g_context.m_running) {
+					if (ImGui::Button("Stop", ImVec2(100, 50)))
+						stopAsync.start();
 					if (g_context.m_protectionState == ProtectionStates::Idle) {
 						ImGui::SameLine();
 						if (ImGui::Button("Start Discord", ImVec2(150, 50))) {
@@ -612,7 +841,8 @@ namespace Menu {
 					}
 				}
 				else {
-					if (ImGui::Button("Start", ImVec2(100, 50))) g_context.startProtection();//TODO make this async
+					if (ImGui::Button("Start", ImVec2(100, 50)))
+						startAsync.start();
 				}
 			}
 
@@ -692,7 +922,7 @@ namespace Menu {
 						g_logger.info(newPasswordInput->c_str());
 
 						if (newRandomPassword == 0) {
-							MessageBoxA(NULL, "Your new password has been copied to your clipboard", "Success", MB_OK | MB_ICONINFORMATION);
+							MessageBoxA(NULL, "Your new password has been copied to your clipboard. Please restart Discord to log back in!", "Success", MB_OK | MB_ICONINFORMATION);
 							ImGui::SetClipboardText(newPasswordInput->c_str());
 						}
 						else {
@@ -785,6 +1015,10 @@ namespace Menu {
 				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
 
 				ConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
+
+				ConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
+				ImGui::SameLine();
+				ImGui::TextTooltip("(?)", "Discord file hashes will be redownloaded each time");
 			}
 
 			ImGui::NewLine();
@@ -794,7 +1028,8 @@ namespace Menu {
 			ImGui::Text("Current encryption mode: %s", 
 				(g_context.kd.type == EncryptionType::HWID) ? "HWID" :
 				(g_context.kd.type == EncryptionType::Password) ? "Password" :
-				(g_context.kd.type == EncryptionType::HWIDAndPassword) ? "HWID and Password" : "Unknown");
+				(g_context.kd.type == EncryptionType::HWIDAndPassword) ? "HWID and Password" :
+				(g_context.kd.type == EncryptionType::Yubi) ? "YubiKey" : "Unknown");
 
 			ImGui::NewLine();
 
@@ -806,20 +1041,30 @@ namespace Menu {
 
 				static char passwordInput[256];
 				static char password2Input[256];
+				static char pinInput[9];
 
 				static float hashTime = 0.5f;
 
-				static std::future<void> asyncReencrypt;
-				static bool reencryptionProcess = false;
+#ifdef YUBIKEYSUPPORT
+				static std::unique_ptr<Crypto::Yubi> yk;
+				static std::string ykInitError;
+				static int ykRetries = 0;
+#endif
+				bool ykCanContinue = false;
 
 				auto reset = [&]() {
 					SecureZeroMemory(passwordInput, 256);
 					SecureZeroMemory(password2Input, 256);
+					SecureZeroMemory(pinInput, 9);
 				};
 
+#ifdef YUBIKEYSUPPORT
+				ImGui::Combo("New encryption mode", &selectedEncryptionMode, "Password-less (HWID)\0Password\0Password + HWID\0YubiKey\0\0");
+#else
 				ImGui::Combo("New encryption mode", &selectedEncryptionMode, "Password-less (HWID)\0Password\0Password + HWID\0\0");
+#endif
 
-				if (selectedEncryptionMode > 0) {
+				if (selectedEncryptionMode == 1 || selectedEncryptionMode == 2) {
 					ImGui::InputText("Password", passwordInput, 256, ImGuiInputTextFlags_Password);
 					ImGui::InputText("Confirm Password", password2Input, 256, ImGuiInputTextFlags_Password);
 					ImGui::SliderFloat("Hash Time", &hashTime, 0.1f, 3.0f, "%.2fs");
@@ -828,65 +1073,156 @@ namespace Menu {
 						"The longer it is, the more time it will take to unlock the container. But it\'ll "
 						"also make it more secure against bruteforcing.");
 				}
+#ifdef YUBIKEYSUPPORT
+				else if (selectedEncryptionMode == 3) {
+					//TODO MERGE WITH THE SETUP!!!!
+					static EasyAsync ykDetectAsync([]() {
+						ykInitError.clear();
+						try {
+							yk = std::make_unique<Crypto::Yubi>();
+							ykRetries = yk->getRetryCount();
+						}
+						catch (std::exception& e) {
+							ykInitError = e.what();
+						}
+					}, true);
+
+					if (ykDetectAsync.isRunning()) {
+						ImGui::NewLine();
+						ImGui::Text("Searching YubiKey...");
+						ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
+					}
+					else {
+						if (ykInitError.empty() && yk) {
+							ImGui::TextWrapped("Found : %s", yk->getModelName().c_str());
+							ImGui::SameLine();
+							if (ImGui::Button("Refresh"))
+								ykDetectAsync.start();
+
+							ImGui::TextWrapped("Please make sure you have a certificate in the card authentification slot!");
+							ImGui::SameLine();
+							ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentification certificate. "
+								"A random message signed with this certificate is going to be used as the encryption key. "
+								"A guide can be found on the Github repo.");
+
+							ImGui::InputText("PIV PIN", pinInput, 9, ImGuiInputTextFlags_Password);
+							ImGui::SameLine();
+							ImGui::TextTooltip("(?)", "This is the PIN used in PIV (Personal Identity Verification). "
+								"By default, it is \"123456\", we strongly recommend you updating it with the YubiKey Manager app. "
+								"THIS IS DIFFERENT FROM THE FIDO PIN!");
+
+							if (ykRetries != -1)
+								ImGui::TextColored(Colors::Red, "Retries left : %d", ykRetries);
+
+							ImGui::SliderFloat("Hash Time", &hashTime, 0.1f, 3.0f, "%.2fs");
+							ImGui::SameLine();
+							ImGui::TextTooltip("(?)", "This corresponds to the time taken to hash your password. "
+								"The longer it is, the more time it will take to unlock the container. But it\'ll "
+								"also make it more secure against bruteforcing.");
+
+							ykCanContinue = pinInput[0] != '\000';
+						}
+						else {
+							ImGui::NewLine();
+							ImGui::TextWrapped("Error : %s", ykInitError.c_str());
+							ImGui::TextWrapped("Please connect your YubiKey.");
+
+							if (ImGui::Button("Refresh"))
+								ykDetectAsync.start();
+						}
+					}
+				}
+#endif
 				else {
 					reset();
 				}
 				ImGui::NewLine();
 
-				if (reencryptionProcess) {
+				static EasyAsync reencryptAsync([&reset]() {
+					//TODO merge with existing code ?
+
+					secure_string password(passwordInput);
+#ifdef YUBIKEYSUPPORT
+					secure_string pin(pinInput);
+#endif
+					reset();
+
+					KeyData newKeydata;
+
+					if (selectedEncryptionMode == 0) {
+						newKeydata = HWID_kd;
+					}
+					else {
+						if (selectedEncryptionMode == 1)
+							newKeydata.type = EncryptionType::Password;
+						else if (selectedEncryptionMode == 2)
+							newKeydata.type = EncryptionType::HWIDAndPassword;
+#ifdef YUBIKEYSUPPORT
+						else if (selectedEncryptionMode == 3) {
+							newKeydata.type = EncryptionType::Yubi;
+							try {
+								ykRetries = yk->authentificate(pin);
+								if (ykRetries != -1) {
+									MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+									return;
+								}
+
+								password = yk->signData(Crypto::Yubi::generateKeyFile());
+							}
+							catch (std::exception& e) {
+								ykRetries = yk->getRetryCount();
+								MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+								return;
+							}
+						}
+#endif
+
+						float singleHashTime = hashTime / 2;
+						uint32_t iterations_key = 0;
+						uint32_t iterations_iv = 0;
+
+						newKeydata.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key, singleHashTime);
+						newKeydata.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv, singleHashTime);
+
+						//TODO add check if iterations == 0, (this shouldn't happen)
+
+						g_config->write("iterations_key", iterations_key);
+						g_config->write("iterations_iv", iterations_iv);
+					}
+
+					g_secureKV->reencrypt(g_context.kd, newKeydata);
+					g_context.kd = newKeydata;
+					g_context.kd.encrypt();
+
+					MessageBoxA(NULL, "Successfully reencrypted!", "Success", MB_OK | MB_ICONINFORMATION);
+				});
+
+				if (reencryptAsync.isRunning()) {
 					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 					ImGui::Button("Reencrypting...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
 					ImGui::PopItemFlag();
 					ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
 				}
-				else {
+				else if (selectedEncryptionMode != 3 || ykCanContinue) {
 					if (ImGui::Button("Reencrypt!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+						const bool passwordBasedEncryption = selectedEncryptionMode == 1 || selectedEncryptionMode == 2;
+
 						if (selectedEncryptionMode == 0 && g_context.kd.type == EncryptionType::HWID) {
 							MessageBoxA(NULL, "Please select a different mode.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							reset();
 						}
-						else if (selectedEncryptionMode != 0 && strcmp(passwordInput, password2Input) != 0) {
+						else if (passwordBasedEncryption && strcmp(passwordInput, password2Input) != 0) {
 							//TODO proper thing in ImGui
 							MessageBoxA(NULL, "Passwords aren\'t identical.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							reset();
 						}
-						else if (selectedEncryptionMode != 0 && strlen(passwordInput) < 6) {//TODO change?
+						else if (passwordBasedEncryption && strlen(passwordInput) < 6) {//TODO change?
 							MessageBoxA(NULL, "The password must have at least 6 characters.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							reset();
 						}
 						else {
-							//TODO merge with existing code ?
-							asyncReencrypt = std::async(std::launch::async, [](secure_string password) {
-								KeyData newKeydata;
-
-								if (selectedEncryptionMode == 0) {
-									newKeydata = HWID_kd;
-								}
-								else {
-									if (selectedEncryptionMode == 1)
-										newKeydata.type = EncryptionType::Password;
-									if (selectedEncryptionMode == 2)
-										newKeydata.type = EncryptionType::HWIDAndPassword;
-
-									float singleHashTime = hashTime / 2;
-									uint32_t iterations_key = 0;
-									uint32_t iterations_iv = 0;
-
-									newKeydata.key = Crypto::derivateKey(password, CryptoPP::AES::MAX_KEYLENGTH, iterations_key, singleHashTime);
-									newKeydata.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv, singleHashTime);
-
-									//TODO add check if iterations == 0, (this shouldn't happen)
-
-									g_config->write("iterations_key", iterations_key);
-									g_config->write("iterations_iv", iterations_iv);
-								}
-
-								g_secureKV->reencrypt(g_context.kd, newKeydata);
-								g_context.kd = newKeydata;
-
-								reencryptionProcess = false;
-								//TODO Succes message
-							}, secure_string(passwordInput));
-							reencryptionProcess = true;
+							reencryptAsync.start();
 						}
-						reset();
 					}
 				}
 				ImGui::Unindent(16.f);
@@ -922,7 +1258,7 @@ namespace Menu {
 				POINT cursorPos;
 				GetCursorPos(&cursorPos);
 				if (TrackPopupMenu(trayMenu, TPM_RETURNCMD | TPM_NONOTIFY, cursorPos.x, cursorPos.y, 0, hwnd, NULL) == TRAY_ID_QUIT) {
-					g_context.stopProtection();
+					stopAsync.start();
 					running = false;
 				}
 				return 0;

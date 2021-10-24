@@ -15,6 +15,7 @@ static json getDefaultConfig() {
 	config["integrity_checkresource"] = true;
 	config["integrity_checkscripts"] = true;
 	config["integrity_allowbetterdiscord"] = false;
+	config["integrity_redownloadhashes"] = false;
 	config["iterations_key"] = 0;//TODO move to SecureKV?
 	config["iterations_iv"] = 0;//TODO move to SecureKV?
 
