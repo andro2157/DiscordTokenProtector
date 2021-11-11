@@ -122,3 +122,9 @@ Everything should be setup, you just need to compile it with the `PROD` or `PROD
 * Stevemk14ebr for [Polyhook v2](https://github.com/stevemk14ebr/PolyHook_2_0)
 * [CUrl](https://curl.se/)
 * [Yubico](https://www.yubico.com/) for YubiKeys and [yubico-piv-tool](https://github.com/Yubico/yubico-piv-tool)
+
+## Donation
+
+If you would like to support this project by donating, you can do it through:
+* [Brave Browser](https://brave.com/) tips
+* Crypto (ETH / BSC) 0x6997878c19ab249AEbc523635f09B95b793AfA5D
