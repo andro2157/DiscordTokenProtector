@@ -195,6 +195,8 @@ private:
 	inline void networkHandler() {
 		using nlohmann::json;
 
+		std::once_flag discordSecurityInfo;
+
 		while (m_protectionState == ProtectionStates::Connected) {
 			try {
 				std::string msg = m_networkManager.Recv();
@@ -209,6 +211,10 @@ private:
 						g_secureKV->reopenFile(true);
 						ExitProcess(0);
 					}
+					std::call_once(discordSecurityInfo, []() {
+						g_discord->setDiscordSecurityInfo(DiscordType::Discord);
+						g_logger.info("set Discord security info!");
+					});
 				}
 			}
 			catch (std::exception& e) {
@@ -315,11 +321,11 @@ private:
 
 				m_protectionState = ProtectionStates::Injecting;
 
-				PROCESS_INFORMATION discordProcess = g_discord->startSuspendedDiscord(discordType);//TODO CloseHandle?
-				//g_processprotection->ProtectProcess(discordProcess.hProcess);//TODO Fix
-
 				//TODO make this thing async
 				try {
+					PROCESS_INFORMATION discordProcess = g_discord->startSuspendedDiscord(discordType);//TODO CloseHandle?
+					//g_processprotection->ProtectProcess(discordProcess.hProcess);//TODO Fix
+
 					if (m_protectionState == ProtectionStates::Stop) continue;
 
 					std::promise<USHORT> portPromise;

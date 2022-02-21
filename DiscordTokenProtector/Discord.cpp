@@ -5,6 +5,7 @@
 
 #include "Discord.h"
 #include "Protection/FileCert.h"
+#include "Protection/ProcessProtection.h"
 #include "Utils/CurlUtils.h"
 #include "Utils/Utils.h"
 
@@ -185,14 +186,33 @@ PROCESS_INFORMATION Discord::startSuspendedDiscord(DiscordType type) {
 
 	std::wstring processDir = getLocal() + (type == DiscordType::Discord ? L"\\Discord" : L"\\DiscordCanary");
 
+	//Copy the security descriptor of DTP
+	
+	//SECURITY_ATTRIBUTES secAttrib;
+	//secAttrib.nLength = sizeof(secAttrib);
+	//secAttrib.bInheritHandle = FALSE;
+
+	//if (DWORD error = GetSecurityInfo(GetCurrentProcess(), SE_KERNEL_OBJECT,
+	//	ATTRIBUTE_SECURITY_INFORMATION |
+	//	DACL_SECURITY_INFORMATION |
+	//	GROUP_SECURITY_INFORMATION |
+	//	LABEL_SECURITY_INFORMATION |
+	//	OWNER_SECURITY_INFORMATION,
+	//	NULL, NULL, NULL, NULL, &secAttrib.lpSecurityDescriptor); error != ERROR_SUCCESS) {
+	//	g_logger.error(sf() << __FUNCSIG__ " : Failed GetSecurityInfo : " << error);
+	//}
+
 	if (!CreateProcessW(
 			NULL,
 			const_cast<LPWSTR>((type == DiscordType::Discord ? m_discordModulePath : m_discordCanaryModulePath).c_str()),
-			NULL, NULL, FALSE, CREATE_SUSPENDED, NULL,
+			/*&secAttrib*/NULL, NULL, FALSE, CREATE_SUSPENDED, NULL,
 			const_cast<LPCWSTR>(processDir.c_str()),
 			&startupInfo, &processInfo)) {
+		//LocalFree(secAttrib.lpSecurityDescriptor);
 		throw std::runtime_error(sf() << __FUNCSIG__ " : Failed CreateProcessW : " << GetLastError());
 	}
+
+	//LocalFree(secAttrib.lpSecurityDescriptor);
 
 	return processInfo;
 }
@@ -203,27 +223,48 @@ DWORD Discord::getDiscordPID(DiscordType type, bool fast, bool suspend) {
 	auto pids = getProcessIDbyName(type == DiscordType::Discord ? L"Discord.exe" : L"DiscordCanary.exe");
 
 	for (DWORD pid : pids) {
-		HANDLE hProcess = OpenProcess(/*PROCESS_QUERY_INFORMATION*/PROCESS_ALL_ACCESS/*to suspend*/, FALSE, pid);
-		DWORD pathSize = MAX_PATH;
-		WCHAR processPath[MAX_PATH];
-
-		if (hProcess == NULL || !QueryFullProcessImageNameW(hProcess, NULL, processPath, &pathSize)) {
-			continue;//Most likely not discord
-		}
-
-		DWORD validPid = NULL;
-		if (fast) validPid = pid;
-		else {
-			if (suspend) pfnNtSuspendProcess(hProcess);
-			if (isValidDiscordModule(processPath)) validPid = pid;
-			else
-				pfnNtResumeProcess(hProcess);
-		}
-		CloseHandle(hProcess);
-
-		if (validPid) return validPid;
+		if (isValidDiscordPID(pid, fast, suspend))
+			return pid;
 	}
 	return 0;
+}
+
+std::vector<DWORD> Discord::getDiscordPIDs(DiscordType type, bool fast, bool suspend) {
+	std::vector<DWORD> discordPids;
+
+	if (type == DiscordType::None) return discordPids;
+
+	auto pids = getProcessIDbyName(type == DiscordType::Discord ? L"Discord.exe" : L"DiscordCanary.exe");
+
+	for (DWORD pid : pids) {
+		if (isValidDiscordPID(pid, fast, suspend))
+			discordPids.push_back(pid);
+	}
+
+	return discordPids;
+}
+
+bool Discord::isValidDiscordPID(DWORD pid, bool fast, bool suspend) {
+	HANDLE hProcess = OpenProcess(/*PROCESS_QUERY_INFORMATION*/PROCESS_ALL_ACCESS/*to suspend*/, FALSE, pid);
+	DWORD pathSize = MAX_PATH;
+	WCHAR processPath[MAX_PATH];
+
+	if (hProcess == NULL || !QueryFullProcessImageNameW(hProcess, NULL, processPath, &pathSize)) {
+		return false;//Most likely not discord
+	}
+
+	bool isValid = fast;
+
+	if (!isValid) {
+		if (suspend) pfnNtSuspendProcess(hProcess);
+		if (isValidDiscordModule(processPath)) isValid = true;
+		else
+			pfnNtResumeProcess(hProcess);
+	}
+
+	CloseHandle(hProcess);
+
+	return isValid;
 }
 
 void Discord::injectPayload(PROCESS_INFORMATION pInfo, size_t port) {
@@ -306,6 +347,18 @@ bool Discord::suspendDiscord(DiscordType type, bool suspend) {
 	}
 
 	CloseHandle(hProcess);
+	return success;
+}
+
+bool Discord::setDiscordSecurityInfo(DiscordType type) {
+	bool success = true;
+
+	for (auto pid : g_discord->getDiscordPIDs(DiscordType::Discord)) {
+		HANDLE hProc = OpenProcess(WRITE_DAC, FALSE, pid);
+		success &= ProcessProtection::setHandleSecurityInfo(hProc);
+		CloseHandle(hProc);
+	}
+
 	return success;
 }
 

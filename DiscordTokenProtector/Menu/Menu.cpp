@@ -759,6 +759,7 @@ namespace Menu {
 				ImGui::Text("Original icon made by Pixel perfect from www.flaticon.com");
 				ImGui::EndTabItem();
 			}
+			ImGui::EndTabBar();
 		}
 
 		ImGui::Unindent();

@@ -100,7 +100,7 @@ HANDLE WINAPI CreateThread_hook(
 
 	//g_logger.info(sf() << "New thread : " << ret);
 
-	g_processprotection->setHandleSecurityInfo(ret);
+	ProcessProtection::setHandleSecurityInfo(ret);
 
 	return ret;
 }

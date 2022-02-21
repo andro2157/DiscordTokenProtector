@@ -39,9 +39,14 @@ public:
 	PROCESS_INFORMATION startSuspendedDiscord(DiscordType type);
 
 	DWORD getDiscordPID(DiscordType type, bool fast = false, bool suspend = false);
+	std::vector<DWORD> getDiscordPIDs(DiscordType type, bool fast = false, bool suspend = false);
+	bool isValidDiscordPID(DWORD pid, bool fast, bool suspend);
+
 	static void injectPayload(PROCESS_INFORMATION pInfo, size_t port = 0);
 
 	bool suspendDiscord(DiscordType type, bool suspend);
+
+	bool setDiscordSecurityInfo(DiscordType type);
 
 	static WORD getDiscordRPCPort();
 	static bool AcceptHandoff(const std::string& port, const std::string& key, const secure_string& token);

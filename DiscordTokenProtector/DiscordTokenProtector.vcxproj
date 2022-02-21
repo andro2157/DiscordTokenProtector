@@ -184,8 +184,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
-    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Yubico\Yubico PIV Tool\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files (x86)\Yubico\Yubico PIV Tool\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -256,7 +256,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;YUBIKEYSUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -477,6 +477,7 @@
     <ClCompile Include="Protection\IntegrityCheck.cpp" />
     <ClCompile Include="Menu\ImGuiAddon.cpp" />
     <ClCompile Include="Menu\Menu.cpp" />
+    <ClCompile Include="Protection\MemoryProtection.cpp" />
     <ClCompile Include="Storage\Config.cpp" />
     <ClCompile Include="Storage\SecureKV.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
@@ -494,6 +495,7 @@
     <ClInclude Include="Menu\FrameRateLimiter.h" />
     <ClInclude Include="Menu\ImGuiAddon.h" />
     <ClInclude Include="Menu\Menu.h" />
+    <ClInclude Include="Protection\MemoryProtection.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Storage\Config.h" />
     <ClInclude Include="Utils\CurlUtils.h" />

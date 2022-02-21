@@ -10,7 +10,7 @@ public:
 
 	bool ProtectProcess(HANDLE hProcess = nullptr, bool protectThreads = true);
 	bool HookCreateThread();
-	bool setHandleSecurityInfo(HANDLE handle);
+	static bool setHandleSecurityInfo(HANDLE handle);
 
 	//TODO add IAT hooks
 	/*
