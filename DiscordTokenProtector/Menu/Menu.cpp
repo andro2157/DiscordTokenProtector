@@ -1018,6 +1018,8 @@ namespace Menu {
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
 
+				SecureConfigCheckbox("Ignore .ico", integrity_ignorenonexec);
+
 				SecureConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
 
 				SecureConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
@@ -1276,7 +1278,7 @@ namespace Menu {
 			changelog = Updater::getChangeLogs();
 		}, true);
 
-		if (ImGui::Button("Refresh updates"))
+		if (ImGui::Button("Refresh updates") && !updateAsync.isRunning())
 			updateAsync.start();
 
 		if (latestVersion.empty() || changelog.empty()) {

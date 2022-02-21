@@ -60,5 +60,6 @@ namespace DEFAULT_KV {
 	constexpr auto integrity_checkscripts = TRUE;
 	constexpr auto integrity_allowbetterdiscord = FALSE;
 	constexpr auto integrity_redownloadhashes = FALSE;
+	constexpr auto integrity_ignorenonexec = FALSE;
 	constexpr auto protect_discord_process = TRUE;
 }

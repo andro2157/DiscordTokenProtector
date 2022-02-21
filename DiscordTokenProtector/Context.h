@@ -303,6 +303,7 @@ private:
 					integrityCheck.setCheckScripts(g_secureKV->read_int("integrity_checkscripts", kd, DEFAULT_KV::integrity_checkscripts));
 					integrityCheck.setAllowBetterDiscord(g_secureKV->read_int("integrity_allowbetterdiscord", kd, DEFAULT_KV::integrity_allowbetterdiscord));
 					integrityCheck.setRedownloadHashes(g_secureKV->read_int("integrity_redownloadhashes", kd, DEFAULT_KV::integrity_redownloadhashes));
+					integrityCheck.setIgnoreNonExecAssets(g_secureKV->read_int("integrity_ignorenonexec", kd, DEFAULT_KV::integrity_ignorenonexec));
 
 					integrityCheck.setDiscordVersion(g_discord->getDiscordVersion(discordType));
 

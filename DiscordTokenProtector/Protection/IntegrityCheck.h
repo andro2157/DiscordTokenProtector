@@ -50,6 +50,9 @@ public:
 	void setAllowBetterDiscord(const bool allow) { m_allowBetterDiscord = allow; }
 	bool isAllowingBetterDiscord() const { return m_allowBetterDiscord; }
 
+	void setIgnoreNonExecAssets(const bool ignore) { m_ignoreNonExecAssets = ignore; }
+	bool isIgnoringNonExecAssets() const { return m_ignoreNonExecAssets; }
+
 	void setRedownloadHashes(const bool redownload) { m_redownloadHashes = redownload; }
 	bool isRedownloadingHashes() const { return m_redownloadHashes; }
 
@@ -93,6 +96,8 @@ private:
 	bool m_checkScripts = false;
 	bool m_checkResources = false;
 	bool m_checkFilehash = false;
+
+	bool m_ignoreNonExecAssets = false;//Currently only .ico
 
 	bool m_allowBetterDiscord = false;
 

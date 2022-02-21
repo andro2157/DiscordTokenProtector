@@ -28,6 +28,9 @@ bool IntegrityCheck::check(const std::string& discordDir) {
 
 			for (const auto& file : std::filesystem::recursive_directory_iterator(discordDir)) {
 				if (isFileIgnored(file)) continue;
+				if (m_ignoreNonExecAssets && file.path().has_extension() &&
+					file.path().extension().u8string() == ".ico")
+					continue;
 
 				//Ignore the hash check for modules, it's checked by checkModules
 				bool isModule = file.path().u8string().substr(0, modulesDir.size()) == modulesDir;
@@ -306,8 +309,14 @@ void IntegrityCheck::checkResources(const std::string& discordDir) {
 void IntegrityCheck::setTotalFilesToCheck(const std::string& discordDir) {
 	m_progressTotal = 0;
 
-	if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash)
-		m_progressTotal += getFileDirCountInDir(discordDir, isFileIgnored);
+	if (m_checkExecutableSignature || m_checkScripts || m_checkFilehash) {
+		m_progressTotal += getFileDirCountInDir(discordDir, [this](std::filesystem::directory_entry file) {
+			return isFileIgnored(file) || (
+				m_checkExecutableSignature && file.path().has_extension() &&
+				file.path().extension().u8string() == ".ico"
+			);
+		});
+	}
 	if (m_checkModules && m_checkFilehash) {
 		for (const auto& moduleDir : std::filesystem::directory_iterator(discordDir + "\\modules")) {
 			if (moduleDir.is_directory()) {
