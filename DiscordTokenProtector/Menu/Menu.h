@@ -26,4 +26,5 @@ namespace Menu {
 	void HomeTab();
 	void AccountTab();
 	void SettingsTab();
+	void AboutTab();
 }

@@ -5,6 +5,8 @@
 
 #include "../Context.h"
 
+#include "../Utils/Updater.h"
+
 #include "shellapi.h"
 #include "../resource.h"
 
@@ -754,15 +756,10 @@ namespace Menu {
 			}
 			if (ImGui::BeginTabItem("Settings")) {
 				SettingsTab();
-
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem("About")) {
-				ImGui::Text("Version : " VER);
-				ImGui::Text("Made by Andro24");
-				ImGui::Text("Github : @andro2157");
-				ImGui::NewLine();
-				ImGui::Text("Original icon made by Pixel perfect from www.flaticon.com");
+				AboutTab();
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
@@ -1255,6 +1252,73 @@ namespace Menu {
 			}
 #endif
 			ImGui::EndChild();
+		}
+	}
+
+	void AboutTab() {
+		ImGui::Text("Version : " VER);
+		ImGui::Text("Made by Andro24");
+		ImGui::Text("Github : @andro2157");
+		ImGui::NewLine();
+		ImGui::Text("Original icon made by Pixel perfect from www.flaticon.com");
+
+		ImGui::NewLine();
+
+		ImGui::Separator();
+
+		ImGui::NewLine();
+
+		static std::string latestVersion = "";
+		static std::string changelog = "";
+
+		static EasyAsync updateAsync([]() {
+			latestVersion = Updater::getLastestVersion();
+			changelog = Updater::getChangeLogs();
+		}, true);
+
+		if (ImGui::Button("Refresh updates"))
+			updateAsync.start();
+
+		if (latestVersion.empty() || changelog.empty()) {
+			ImGui::TextWrapped("Checking for update...");
+		}
+		else {
+			if (latestVersion == Updater::UPDATE_ERROR)
+				ImGui::TextWrapped("Failed to get the latest version. Please try again.");
+			else {
+				if (latestVersion != VER) {
+					ImGui::TextColored(Colors::Green, "New version available : %s", latestVersion.c_str());
+					if (ImGui::Button("Download (Github Release)")) {
+						ShellExecute(0, 0, TEXT("https://github.com/andro2157/DiscordTokenProtector/releases/"), 0, 0, SW_SHOW);
+					}
+				}
+				else {
+					ImGui::Text("You\'re up to date!");
+				}
+
+				if (ImGui::CollapsingHeader("Change logs")) {
+					if (changelog == Updater::UPDATE_ERROR)
+						ImGui::TextWrapped("Failed to get the change logs. Please try again.");
+					else {
+						std::string line;
+						std::stringstream ss;
+						ss << changelog;
+
+						while (std::getline(ss, line)) {
+							if (line.empty()) continue;
+
+							ImVec4 col = Colors::White;
+
+							if (line[0] == '+')
+								col = Colors::Green;
+							else if (line[0] == '-')
+								col = Colors::Red;
+
+							ImGui::TextColored(col, line.c_str());
+						}
+					}
+				}
+			}
 		}
 	}
 

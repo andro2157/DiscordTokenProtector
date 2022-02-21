@@ -155,6 +155,9 @@
     <ClInclude Include="Protection\IntegrityCheck.h">
       <Filter>Fichiers d%27en-tête\Protection</Filter>
     </ClInclude>
+    <ClInclude Include="Utils\Updater.h">
+      <Filter>Fichiers d%27en-tête\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DiscordTokenProtector.rc">

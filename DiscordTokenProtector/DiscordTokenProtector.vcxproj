@@ -506,6 +506,7 @@
     <ClInclude Include="Protection\ProcessProtection.h" />
     <ClInclude Include="Storage\SecureKV.h" />
     <ClInclude Include="Utils\Timer.h" />
+    <ClInclude Include="Utils\Updater.h" />
     <ClInclude Include="Utils\Utils.h" />
   </ItemGroup>
   <ItemGroup>
