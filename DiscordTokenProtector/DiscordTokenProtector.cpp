@@ -14,7 +14,7 @@ void mainInit() {
 
         g_processprotection = std::make_unique<ProcessProtection>();
 #ifdef _PROD
-        //TODO Protect threads, threads are killable without admin permission
+        g_processprotection->HookCreateThread();
         g_processprotection->ProtectProcess();
 #endif
         g_discord = std::make_unique<Discord>();

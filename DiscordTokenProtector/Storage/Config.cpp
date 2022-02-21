@@ -8,14 +8,17 @@ static json getDefaultConfig() {
 	config["version"] = 1;
 	config["auto_start"] = true;
 	config["auto_start_discord"] = false;
-	config["integrity"] = true;
-	config["integrity_checkhash"] = true;
-	config["integrity_checkexecutable"] = true;
-	config["integrity_checkmodule"] = true;
-	config["integrity_checkresource"] = true;
-	config["integrity_checkscripts"] = true;
-	config["integrity_allowbetterdiscord"] = false;
-	config["integrity_redownloadhashes"] = false;
+
+	//Integrity settings have been moved to SecureKV
+	//config["integrity"] = true;
+	//config["integrity_checkhash"] = true;
+	//config["integrity_checkexecutable"] = true;
+	//config["integrity_checkmodule"] = true;
+	//config["integrity_checkresource"] = true;
+	//config["integrity_checkscripts"] = true;
+	//config["integrity_allowbetterdiscord"] = false;
+	//config["integrity_redownloadhashes"] = false;
+
 	config["iterations_key"] = 0;//TODO move to SecureKV?
 	config["iterations_iv"] = 0;//TODO move to SecureKV?
 

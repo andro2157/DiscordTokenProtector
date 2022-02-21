@@ -5,6 +5,8 @@
 
 #include "../Context.h"
 
+#include "../Utils/Updater.h"
+
 #include "shellapi.h"
 #include "../resource.h"
 
@@ -18,6 +20,11 @@ namespace Menu {
 #define ConfigCheckbox(ui_name, config_name)\
 	static bool checkbox_##config_name## = g_config->read<bool>(#config_name);\
 	if (ImGui::Checkbox(ui_name, &checkbox_##config_name##)) g_config->write<bool>(#config_name, checkbox_##config_name##);
+
+// Note : the keydata needs to be decrypted before using this macro!
+#define SecureConfigCheckbox(ui_name, config_name)\
+	static bool securecheckbox_##config_name## = g_secureKV->read_int(#config_name, g_context.kd, DEFAULT_KV::##config_name##) == 1;\
+	if (ImGui::Checkbox(ui_name, &securecheckbox_##config_name##)) g_secureKV->write_int(#config_name, securecheckbox_##config_name##, g_context.kd);
 
 	ImFont* largeFont = nullptr;
 	ImFont* smallFont = nullptr;
@@ -752,13 +759,10 @@ namespace Menu {
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem("About")) {
-				ImGui::Text("Version : " VER);
-				ImGui::Text("Made by Andro24");
-				ImGui::Text("Github : @andro2157");
-				ImGui::NewLine();
-				ImGui::Text("Original icon made by Pixel perfect from www.flaticon.com");
+				AboutTab();
 				ImGui::EndTabItem();
 			}
+			ImGui::EndTabBar();
 		}
 
 		ImGui::Unindent();
@@ -990,38 +994,43 @@ namespace Menu {
 		if (ImGui::BeginChild("SettingsTab")) {
 			if (ImGui::CollapsingHeader("Integrity Check")) {
 				ImGui::TextWrapped("Checks the integrity of the Discord installation before launching it.");
-				ConfigCheckbox("Enable integrity check", integrity);
+				SecureConfigCheckbox("Enable integrity check", integrity);
 
-				ConfigCheckbox("Check file hashes", integrity_checkhash);
+				SecureConfigCheckbox("Check file hashes", integrity_checkhash);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will compare the file hashes of your Discord installation "
 				"with the known ones. The hashes for your Discord version needs to be on the git repo.");
 
-				ConfigCheckbox("Check digital signature", integrity_checkexecutable);
+				SecureConfigCheckbox("Check digital signature", integrity_checkexecutable);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the digital signature of every executable files "
 				"(.exe and .dll)");
 
-				ConfigCheckbox("Check modules", integrity_checkmodule);
+				SecureConfigCheckbox("Check modules", integrity_checkmodule);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the NodeJS modules loaded by Discord");
 
-				ConfigCheckbox("Check resources", integrity_checkresource);
+				SecureConfigCheckbox("Check resources", integrity_checkresource);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the resources scripts");
 
-				ConfigCheckbox("Check scripts", integrity_checkscripts);
+				SecureConfigCheckbox("Check scripts", integrity_checkscripts);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
 
-				ConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
+				SecureConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
 
-				ConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
+				SecureConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "Discord file hashes will be redownloaded each time");
 			}
 
 			ImGui::NewLine();
+
+			SecureConfigCheckbox("Protect Discord process", protect_discord_process);
+
+			ImGui::NewLine();
+
 			ImGui::Separator();
 			ImGui::NewLine();
 
@@ -1243,6 +1252,73 @@ namespace Menu {
 			}
 #endif
 			ImGui::EndChild();
+		}
+	}
+
+	void AboutTab() {
+		ImGui::Text("Version : " VER);
+		ImGui::Text("Made by Andro24");
+		ImGui::Text("Github : @andro2157");
+		ImGui::NewLine();
+		ImGui::Text("Original icon made by Pixel perfect from www.flaticon.com");
+
+		ImGui::NewLine();
+
+		ImGui::Separator();
+
+		ImGui::NewLine();
+
+		static std::string latestVersion = "";
+		static std::string changelog = "";
+
+		static EasyAsync updateAsync([]() {
+			latestVersion = Updater::getLastestVersion();
+			changelog = Updater::getChangeLogs();
+		}, true);
+
+		if (ImGui::Button("Refresh updates"))
+			updateAsync.start();
+
+		if (latestVersion.empty() || changelog.empty()) {
+			ImGui::TextWrapped("Checking for update...");
+		}
+		else {
+			if (latestVersion == Updater::UPDATE_ERROR)
+				ImGui::TextWrapped("Failed to get the latest version. Please try again.");
+			else {
+				if (latestVersion != VER) {
+					ImGui::TextColored(Colors::Green, "New version available : %s", latestVersion.c_str());
+					if (ImGui::Button("Download (Github Release)")) {
+						ShellExecute(0, 0, TEXT("https://github.com/andro2157/DiscordTokenProtector/releases/"), 0, 0, SW_SHOW);
+					}
+				}
+				else {
+					ImGui::Text("You\'re up to date!");
+				}
+
+				if (ImGui::CollapsingHeader("Change logs")) {
+					if (changelog == Updater::UPDATE_ERROR)
+						ImGui::TextWrapped("Failed to get the change logs. Please try again.");
+					else {
+						std::string line;
+						std::stringstream ss;
+						ss << changelog;
+
+						while (std::getline(ss, line)) {
+							if (line.empty()) continue;
+
+							ImVec4 col = Colors::White;
+
+							if (line[0] == '+')
+								col = Colors::Green;
+							else if (line[0] == '-')
+								col = Colors::Red;
+
+							ImGui::TextColored(col, line.c_str());
+						}
+					}
+				}
+			}
 		}
 	}
 
