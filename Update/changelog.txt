@@ -1,3 +1,6 @@
-+ Test
-- Test
-Test
+Dev 8 : Security Updates
++ Added Discord process protection
++ Added DTP thread protection
++ Moved integrity check settings in the encrypted config
++ Added an update checker in the about tab
+* Fixed minor bugs

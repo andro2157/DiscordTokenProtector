@@ -9,14 +9,20 @@
 
 This project is still under development! You might face some unstability issues!\
 This is in **NO** way a perfect solution against Discord token grabbers.
-But this will protect you against most (nearly every) token grabbers.
+But this will protect you against most token grabbers:
+- (Most common) LevelDB reading *(from the beginning)*
+- (Less common) Script injection / Discord module tampering *(from dev-6)*
+- (Rare) Memory reading *(from dev-8)*
 
 **Any targeted attack against DiscordTokenProtector can bypass this protection!**
+
+## [✔️Good practices when using DTP](goodpractice.md)
 
 ### ⚠️ Disclamer
 **DTP is not affiliated with Discord.**\
 **DTP is in NO way responsible for what can happen on your Discord account.**\
 **Chances of getting terminated using DTP are very low, but please keep in mind that using a thirdparty software is against Discord's TOS.**
+
 
 ## Features
 
@@ -25,6 +31,7 @@ But this will protect you against most (nearly every) token grabbers.
 #### ✅ Change your Discord password in one-click
 #### ✅ Check the integrity of your Discord installation on launch (BetterDiscord is supported)
 #### ✅ Check scripts for known malwares *(eg AnarchyGrabber3)*
+#### ✅ Protect the Discord process from memory reading / code injection
 
 **Except from YubiKey NEO*
 
