@@ -477,7 +477,6 @@
     <ClCompile Include="Protection\IntegrityCheck.cpp" />
     <ClCompile Include="Menu\ImGuiAddon.cpp" />
     <ClCompile Include="Menu\Menu.cpp" />
-    <ClCompile Include="Protection\MemoryProtection.cpp" />
     <ClCompile Include="Storage\Config.cpp" />
     <ClCompile Include="Storage\SecureKV.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
@@ -495,7 +494,6 @@
     <ClInclude Include="Menu\FrameRateLimiter.h" />
     <ClInclude Include="Menu\ImGuiAddon.h" />
     <ClInclude Include="Menu\Menu.h" />
-    <ClInclude Include="Protection\MemoryProtection.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Storage\Config.h" />
     <ClInclude Include="Utils\CurlUtils.h" />

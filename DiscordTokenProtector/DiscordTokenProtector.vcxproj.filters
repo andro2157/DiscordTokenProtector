@@ -90,9 +90,6 @@
     <ClCompile Include="Protection\IntegrityCheck.cpp">
       <Filter>Fichiers sources\Protection</Filter>
     </ClCompile>
-    <ClCompile Include="Protection\MemoryProtection.cpp">
-      <Filter>Fichiers sources\Protection</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes.h">
@@ -156,9 +153,6 @@
       <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Protection\IntegrityCheck.h">
-      <Filter>Fichiers d%27en-tête\Protection</Filter>
-    </ClInclude>
-    <ClInclude Include="Protection\MemoryProtection.h">
       <Filter>Fichiers d%27en-tête\Protection</Filter>
     </ClInclude>
   </ItemGroup>

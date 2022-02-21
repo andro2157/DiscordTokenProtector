@@ -15,6 +15,20 @@ public:
 	void write(const secure_string& key, const secure_string& value, KeyData& keydata);
 	secure_string read(const secure_string& key, KeyData& keydata);
 
+	//Unsafe in memory
+	void write_int(const secure_string& key, const int value, KeyData& keydata) {
+		write(key, secure_string(std::to_string(value)), keydata);
+	}
+	//Unsafe in memory
+	int read_int(const secure_string& key, KeyData& keydata, const int defaultValue = 0) {
+		secure_string value = read(key, keydata);
+		if (value.empty()) {
+			write_int(key, defaultValue, keydata);
+			return defaultValue;
+		}
+		return std::stoi(std::string(value));
+	}
+
 	using KV = std::pair<secure_string, secure_string>;
 	using KVs = std::vector<KV>;
 
@@ -36,3 +50,15 @@ private:
 };
 
 inline std::unique_ptr<SecureKV> g_secureKV;
+
+namespace DEFAULT_KV {
+	constexpr auto integrity = TRUE;
+	constexpr auto integrity_checkhash = TRUE;
+	constexpr auto integrity_checkexecutable = TRUE;
+	constexpr auto integrity_checkmodule = TRUE;
+	constexpr auto integrity_checkresource = TRUE;
+	constexpr auto integrity_checkscripts = TRUE;
+	constexpr auto integrity_allowbetterdiscord = FALSE;
+	constexpr auto integrity_redownloadhashes = FALSE;
+	constexpr auto protect_discord_process = TRUE;
+}

@@ -13,10 +13,10 @@ void mainInit() {
 #endif
 
         g_processprotection = std::make_unique<ProcessProtection>();
-//#ifdef _PROD
+#ifdef _PROD
         g_processprotection->HookCreateThread();
         g_processprotection->ProtectProcess();
-//#endif
+#endif
         g_discord = std::make_unique<Discord>();
 
         g_config = std::make_unique<Config>();

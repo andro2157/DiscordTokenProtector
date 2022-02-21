@@ -19,6 +19,11 @@ namespace Menu {
 	static bool checkbox_##config_name## = g_config->read<bool>(#config_name);\
 	if (ImGui::Checkbox(ui_name, &checkbox_##config_name##)) g_config->write<bool>(#config_name, checkbox_##config_name##);
 
+// Note : the keydata needs to be decrypted before using this macro!
+#define SecureConfigCheckbox(ui_name, config_name)\
+	static bool securecheckbox_##config_name## = g_secureKV->read_int(#config_name, g_context.kd, DEFAULT_KV::##config_name##) == 1;\
+	if (ImGui::Checkbox(ui_name, &securecheckbox_##config_name##)) g_secureKV->write_int(#config_name, securecheckbox_##config_name##, g_context.kd);
+
 	ImFont* largeFont = nullptr;
 	ImFont* smallFont = nullptr;
 	ImFont* monospaceFont = nullptr;
@@ -749,6 +754,7 @@ namespace Menu {
 			}
 			if (ImGui::BeginTabItem("Settings")) {
 				SettingsTab();
+
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem("About")) {
@@ -991,38 +997,43 @@ namespace Menu {
 		if (ImGui::BeginChild("SettingsTab")) {
 			if (ImGui::CollapsingHeader("Integrity Check")) {
 				ImGui::TextWrapped("Checks the integrity of the Discord installation before launching it.");
-				ConfigCheckbox("Enable integrity check", integrity);
+				SecureConfigCheckbox("Enable integrity check", integrity);
 
-				ConfigCheckbox("Check file hashes", integrity_checkhash);
+				SecureConfigCheckbox("Check file hashes", integrity_checkhash);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will compare the file hashes of your Discord installation "
 				"with the known ones. The hashes for your Discord version needs to be on the git repo.");
 
-				ConfigCheckbox("Check digital signature", integrity_checkexecutable);
+				SecureConfigCheckbox("Check digital signature", integrity_checkexecutable);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the digital signature of every executable files "
 				"(.exe and .dll)");
 
-				ConfigCheckbox("Check modules", integrity_checkmodule);
+				SecureConfigCheckbox("Check modules", integrity_checkmodule);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the NodeJS modules loaded by Discord");
 
-				ConfigCheckbox("Check resources", integrity_checkresource);
+				SecureConfigCheckbox("Check resources", integrity_checkresource);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check the resources scripts");
 
-				ConfigCheckbox("Check scripts", integrity_checkscripts);
+				SecureConfigCheckbox("Check scripts", integrity_checkscripts);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "This will check every JS scripts for known malware signatures");
 
-				ConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
+				SecureConfigCheckbox("Allow BetterDiscord", integrity_allowbetterdiscord);
 
-				ConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
+				SecureConfigCheckbox("Don\'t use cached hashes", integrity_redownloadhashes);
 				ImGui::SameLine();
 				ImGui::TextTooltip("(?)", "Discord file hashes will be redownloaded each time");
 			}
 
 			ImGui::NewLine();
+
+			SecureConfigCheckbox("Protect Discord process", protect_discord_process);
+
+			ImGui::NewLine();
+
 			ImGui::Separator();
 			ImGui::NewLine();
 

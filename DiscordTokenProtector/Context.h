@@ -211,10 +211,13 @@ private:
 						g_secureKV->reopenFile(true);
 						ExitProcess(0);
 					}
-					std::call_once(discordSecurityInfo, []() {
-						g_discord->setDiscordSecurityInfo(DiscordType::Discord);
-						g_logger.info("set Discord security info!");
-					});
+
+					if (g_secureKV->read_int("protect_discord_process", kd, DEFAULT_KV::protect_discord_process)) {
+						std::call_once(discordSecurityInfo, []() {
+							g_discord->setDiscordSecurityInfo(DiscordType::Discord);
+							g_logger.info("set Discord security info!");
+						});
+					}
 				}
 			}
 			catch (std::exception& e) {
@@ -289,17 +292,17 @@ private:
 				remover_canary_LocalStorage.Remove();
 
 				//Check before launching!
-				if (g_config->read<bool>("integrity")) {
+				if (g_secureKV->read_int("integrity", kd, DEFAULT_KV::integrity)) {
 					m_protectionState = ProtectionStates::Checking;
 					if (m_protectionState == ProtectionStates::Stop) continue;
 
-					integrityCheck.setCheckHash(g_config->read<bool>("integrity_checkhash"));
-					integrityCheck.setCheckExecutableSig(g_config->read<bool>("integrity_checkexecutable"));
-					integrityCheck.setCheckModule(g_config->read<bool>("integrity_checkmodule"));
-					integrityCheck.setCheckResources(g_config->read<bool>("integrity_checkresource"));
-					integrityCheck.setCheckScripts(g_config->read<bool>("integrity_checkscripts"));
-					integrityCheck.setAllowBetterDiscord(g_config->read<bool>("integrity_allowbetterdiscord"));
-					integrityCheck.setRedownloadHashes(g_config->read<bool>("integrity_redownloadhashes"));
+					integrityCheck.setCheckHash(g_secureKV->read_int("integrity_checkhash", kd, DEFAULT_KV::integrity_checkhash));
+					integrityCheck.setCheckExecutableSig(g_secureKV->read_int("integrity_checkexecutable", kd, DEFAULT_KV::integrity_checkexecutable));
+					integrityCheck.setCheckModule(g_secureKV->read_int("integrity_checkmodule", kd, DEFAULT_KV::integrity_checkmodule));
+					integrityCheck.setCheckResources(g_secureKV->read_int("integrity_checkresource", kd, DEFAULT_KV::integrity_checkresource));
+					integrityCheck.setCheckScripts(g_secureKV->read_int("integrity_checkscripts", kd, DEFAULT_KV::integrity_checkscripts));
+					integrityCheck.setAllowBetterDiscord(g_secureKV->read_int("integrity_allowbetterdiscord", kd, DEFAULT_KV::integrity_allowbetterdiscord));
+					integrityCheck.setRedownloadHashes(g_secureKV->read_int("integrity_redownloadhashes", kd, DEFAULT_KV::integrity_redownloadhashes));
 
 					integrityCheck.setDiscordVersion(g_discord->getDiscordVersion(discordType));
 
