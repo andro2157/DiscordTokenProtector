@@ -37,6 +37,8 @@ But this will protect you against most token grabbers:
 
 ## Installation / Update
 
+## Note: Currently the token detection might not work as Discord is deloying an update to encrypt the token! This will protect every users from LevelDB reading grabbers. A DTP update will be released to fix this issue. DTP will still protect you from script injecting / memory reading grabbers.
+
 ### Download the lastest release **[HERE](https://github.com/andro2157/DiscordTokenProtector/releases)**
 
 * Start DiscordTokenProtectorSetup.exe
