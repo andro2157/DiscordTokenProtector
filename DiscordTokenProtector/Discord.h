@@ -51,6 +51,10 @@ public:
 	static WORD getDiscordRPCPort();
 	static bool AcceptHandoff(const std::string& port, const std::string& key, const secure_string& token);
 	static DiscordUserInfo getUserInfo(const secure_string& token);
+
+	secure_string getMemoryToken(bool verify);
+
+	[[deprecated("Patched by Discord : Use memory reading one instead")]]
 	static secure_string getStoredToken(bool verify);
 
 	//error = token if it is successfull

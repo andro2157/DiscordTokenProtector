@@ -205,7 +205,9 @@ namespace Menu {
 
 				ImGui::NewLine();
 
-				if (g_context.state == State::TokenSecure)
+				if (g_context.state == State::GetUserInfoError)
+					UserInfoErrorMenu();
+				else if (g_context.state == State::TokenSecure)
 					MainMenu();
 				else if (g_context.state == State::RequirePassword)
 					StartupPassword();
@@ -365,7 +367,6 @@ namespace Menu {
 				}
 			}
 #endif
-
 			uint32_t iterations_key = g_config->read<uint32_t>("iterations_key");
 			uint32_t iterations_iv = g_config->read<uint32_t>("iterations_iv");
 			//TODO add sanitary check of iterations
@@ -393,13 +394,25 @@ namespace Menu {
 #endif
 				return;
 			}
-			else if (Discord::getUserInfo(token).id.empty()) {
-				MessageBoxA(NULL, "The token is invalid and has been removed from DTP.\
-							Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
-				g_secureKV->reopenFile(true);//Reset
-				ExitProcess(0);
-			}
 			else {
+				try {
+					Discord::getUserInfo(token);
+				}
+				catch (curl_exception& e) {
+					MessageBoxA(NULL, "Failed to fetch user info, please check your internet connection", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+					return;
+				}
+				catch (invalid_token_exception& e) {
+					MessageBoxA(NULL, "The token is invalid and has been removed from DTP.\
+							Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
+					g_secureKV->reopenFile(true);//Reset
+					ExitProcess(0);
+				}
+				catch (std::exception& e) {
+					MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+					return;
+				}
+
 				g_context.state = State::TokenSecure;
 
 				//Clean the local storage and session storage (just in case)
@@ -482,47 +495,84 @@ namespace Menu {
 
 		static Timer updateTimer;
 
+		static secure_string detectedToken;
+		static DiscordUserInfo userInfo;
+
 		if (g_context.state == State::NoToken) {
 			static int step = 0;
+
+			static std::string error;
+
+			static std::future<void> tokenDetectionFuture;
+
+			auto startDetection = []() {
+				tokenDetectionFuture = std::async(std::launch::async, []() {
+					detectedToken = g_discord->getMemoryToken(true);
+					userInfo = Discord::getUserInfo(detectedToken);
+				});
+			};
+
+			auto detectionReady = []() {
+				return tokenDetectionFuture.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready;
+			};
+
 			if (updateTimer.getElapsed<std::chrono::milliseconds>() > 1000) {
 				if (step == 0) {
-					if (g_discord->isDiscordRunning() != DiscordType::None)
+					if (g_discord->isDiscordRunning() != DiscordType::None) {
 						step = 1;
-				} else if (step == 1) {
-					if (g_discord->isDiscordRunning() == DiscordType::None)
-						step = 2;
+						//g_context.initTokenState();
+						startDetection();
+					}
 				}
-				else if (step == 2) {
-					g_context.initTokenState();
+				else {
+					if (detectionReady()) {
+						try {
+							error.clear();
+							tokenDetectionFuture.get();
+							g_context.state = State::DiscoveredToken;
+						}
+						catch (curl_exception& e) {
+							error = "Please check your internet connection : " + std::string(e.what());
+						}
+						catch (discord_not_running_exception& e) {
+							error = "Please run Discord";
+						}
+						catch (no_token_exception& e) {
+							error = "Unable to find token in memory";
+						}
+
+						if (!error.empty()) {
+							startDetection();
+							step++;
+						}
+					}
 				}
+
+				updateTimer.reset();
 			}
 
 			ImGui::TextWrapped("Hey! We\'re unable to detect your Discord token on this computer!\n"
 				"Please follow these steps:");
 			ImGui::NewLine();
 			ImGui::TextColored(step > 0 ? Colors::Green : Colors::GrayPurple, "* Launch the Discord app and connect to your account.");
-			ImGui::TextColored(step > 1 ? Colors::Green : Colors::GrayPurple, "* Quit the Discord app.");
 			ImGui::TextColored(Colors::GrayPurple, "* Wait for us to detect your token.");
 			ImGui::NewLine();
-			if (step > 1)
+
+			if (!error.empty()) {
+				ImGui::TextColored(Colors::Red, "Error :");
+				ImGui::TextWrapped(error.c_str());
+				ImGui::TextColored(Colors::GrayPurple, "Retrying...");
+			}
+
+			if (step > 5)
 				ImGui::TextWrapped("If the detection doesn\'t work, please make a ticket on GitHub.");
 		}
 		else if (g_context.state == State::DiscoveredToken) {
-			static DiscordUserInfo info;
-			static EasyAsync getInfoAsync([]() {
-				info = Discord::getUserInfo(Discord::getStoredToken(true));
-			}, true);
-
 			ImGui::TextWrapped("We found this account:");
 			ImGui::NewLine();
 
-			if (getInfoAsync.isRunning()) {
-				ImGui::Text("Getting user info...");
-			}
-			else {
-				ImGui::Text("Username : %s", info.fullUsername.c_str());
-				ImGui::Text("id : %s", info.id.c_str());
-			}
+			ImGui::Text("Username : %s", userInfo.fullUsername.c_str());
+			ImGui::Text("id : %s", userInfo.id.c_str());
 
 			ImGui::NewLine();
 
@@ -531,10 +581,8 @@ namespace Menu {
 
 			ImGui::NewLine();
 
-			if (!getInfoAsync.isRunning()) {
-				if (ImGui::Button("It\'s correct!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
-					g_context.state = State::MakeNewPassword;
-				}
+			if (ImGui::Button("It\'s correct!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+				g_context.state = State::MakeNewPassword;
 			}
 		}
 		else if (g_context.state == State::MakeNewPassword ||
@@ -702,7 +750,8 @@ namespace Menu {
 					g_config->write("iterations_iv", iterations_iv);
 				}
 
-				g_secureKV->write("token", Discord::getStoredToken(false), g_context.kd);
+				g_secureKV->write("token", detectedToken, g_context.kd);
+				detectedToken.clear();
 
 				//Clean the local storage and session storage
 				g_context.remover_canary_LocalStorage.Remove();
@@ -740,6 +789,28 @@ namespace Menu {
 			}
 		}
 		ImGui::Unindent();
+	}
+
+	void UserInfoErrorMenu() {
+		static EasyAsync getInfoAsync([]() {
+			g_context.initTokenState();
+		});
+
+		ImGui::TextWrapped("Failed to get user info!");
+		ImGui::TextWrapped("Please check your internet connection.");
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		if (getInfoAsync.isRunning()) {
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+			ImGui::Button("Retrying...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
+			ImGui::PopItemFlag();
+			ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
+		}
+		else if (ImGui::Button("Retry!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+			getInfoAsync.start();
+		}
 	}
 
 	void MainMenu() {
@@ -864,7 +935,13 @@ namespace Menu {
 			//TODO merge with existing code
 			static DiscordUserInfo info;
 			static EasyAsync getInfoAsync([]() {
-				info = Discord::getUserInfo(g_secureKV->read("token", g_context.kd));
+				try {
+					info = Discord::getUserInfo(g_secureKV->read("token", g_context.kd));
+				}
+				catch (...) {//TODO change
+					info = DiscordUserInfo();
+					info.fullUsername = "Error please retry";
+				}
 			}, true);
 
 			ImGui::Text("Your account:");

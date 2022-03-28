@@ -489,6 +489,7 @@
     <ClInclude Include="Context.h" />
     <ClInclude Include="Crypto\Crypto.h" />
     <ClInclude Include="Crypto\CryptoUtils.h" />
+    <ClInclude Include="Utils\Exceptions.h" />
     <ClInclude Include="Protection\IntegrityCheck.h" />
     <ClInclude Include="Menu\Colors.h" />
     <ClInclude Include="Menu\FrameRateLimiter.h" />

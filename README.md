@@ -1,7 +1,7 @@
-## ⚠️ Note: Currently the token detection might not work as Discord is deloying an update to encrypt the token! This will protect every users from LevelDB reading grabbers. A DTP update will be released to fix this issue. DTP will still protect you from script injecting / memory reading grabbers.
-
 # Discord Token Protector
 #### Protect your Discord token from malicious grabbers!
+
+##### ✔️ **Works with the latest version of Discord**
 
 ![Main Workflow](https://github.com/andro2157/DiscordTokenProtector/actions/workflows/msbuild.yml/badge.svg)
 

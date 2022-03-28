@@ -15,7 +15,7 @@ enum class State {
 	MakeNewPassword,
 	RequirePassword,
 	TokenSecure,
-
+	GetUserInfoError,
 };
 
 enum class ProtectionStates {
@@ -73,37 +73,51 @@ public:
 
 	inline void initTokenState() {
 		auto discoverToken = [this](bool hwid = false) {
-			secure_string token = Discord::getStoredToken(true);
-			if (token.empty() || Discord::getUserInfo(token).id.empty()) {//TODO invalid token message
-				this->state = hwid ? State::InvalidHWID : State::NoToken;
+			try {
+				secure_string token = g_discord->getMemoryToken(true);
+
+				Discord::getUserInfo(token);//TODO invalid token message
+
+				if (hwid) {
+					g_secureKV->write("token", token, HWID_kd);
+					kd = HWID_kd;
+					this->state = State::TokenSecure;
+				}
+				else {
+					this->state = State::DiscoveredToken;
+				}
 			}
-			else if (hwid) {
-				g_secureKV->write("token", token, HWID_kd);
-				kd = HWID_kd;
-				this->state = State::TokenSecure;
-			} else {				
-				this->state = State::DiscoveredToken;
+			catch (std::exception& e) {
+				g_logger.warning(sf() << "in initTokenState : " << e.what());
+				this->state = hwid ? State::InvalidHWID : State::NoToken;
 			}
 		};
 
 		encryptionType_cache = g_secureKV->getEncryptionType();
 		if (encryptionType_cache == EncryptionType::Unknown) {
-			discoverToken();
+			//discoverToken();
+			this->state = State::NoToken;
 			return;
 		}
 
 		if (encryptionType_cache == EncryptionType::HWID) {
 			secure_string token = g_secureKV->read("token", HWID_kd);
-			if (token.empty() || Discord::getUserInfo(token).id.empty()) {
+			
+			try {
+				g_discord->getUserInfo(token);
+			}
+			catch (invalid_token_exception& e) {
 				discoverToken(true);
 			}
-			else {
-				kd = HWID_kd;
-				state = State::TokenSecure;
-
-				if (g_config->read<bool>("auto_start"))
-					startProtection();
+			catch (...) {
+				state = State::GetUserInfoError;
 			}
+
+			kd = HWID_kd;
+			state = State::TokenSecure;
+
+			if (g_config->read<bool>("auto_start"))
+				startProtection();
 		}
 		else {
 			state = State::RequirePassword;

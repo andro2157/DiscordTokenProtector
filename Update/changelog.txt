@@ -1,3 +1,9 @@
+Dev 9 : Fix the detection
++ Fixed the token detection
++ Added config integrity check
++ Better handling of errors
+* Fixed some bugs
+
 Dev 8 : Security Updates
 + Added Discord process protection
 + Added DTP thread protection
