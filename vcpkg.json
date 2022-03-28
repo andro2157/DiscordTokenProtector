@@ -1,0 +1,15 @@
+{
+  "name": "dtp",
+  "version-string": "0.0.1",
+  "dependencies": [
+    {
+      "name": "imgui",
+      "features": ["glfw-binding", "opengl3-binding", "glfw-binding", "win32-binding"]
+    },
+    "nlohmann-json",
+    "cryptopp",
+    "curl",
+    "polyhook2",
+    "gl3w"
+  ]
+}
