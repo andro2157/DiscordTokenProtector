@@ -1,4 +1,6 @@
 #include "Config.h"
+#include "../Crypto/CryptoUtils.h"
+#include "../Context.h"
 
 using nlohmann::json;
 
@@ -71,7 +73,11 @@ bool Config::save() {
 	reopenFile(true);
 
 	try {
-		m_file << m_cache.dump(4) << std::flush;
+		std::string fileContent = m_cache.dump(4);
+		m_file << fileContent << std::flush;
+
+		if (g_context.state == State::TokenSecure)
+			g_secureKV->write("config_hash", secure_string(CryptoUtils::SimpleSHA256(fileContent)), g_context.kd);
 	}
 	catch (std::exception& e) {
 		g_logger.error(sf() << "Failed to save config : " << e.what());
@@ -88,6 +94,20 @@ bool Config::load() {
 
 	m_file.seekg(0);
 	std::string file_str((std::istreambuf_iterator<char>(m_file)), std::istreambuf_iterator<char>());
+
+	if (g_context.state == State::TokenSecure) {
+		secure_string fileHash(CryptoUtils::SimpleSHA256(file_str));
+
+		secure_string savedHash = g_secureKV->read("config_hash", g_context.kd);
+
+		if (savedHash.empty()) {
+			g_secureKV->write("config_hash", fileHash, g_context.kd);
+		}
+		else if (savedHash != fileHash) {
+			MessageBoxA(NULL, "Warning : config file tampered. Please double check your settings.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+			g_secureKV->write("config_hash", fileHash, g_context.kd);
+		}
+	}
 
 	json loadedConfig;
 	try {

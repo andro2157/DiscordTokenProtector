@@ -22,6 +22,7 @@ namespace Menu {
 	void SetupMenu();
 	void InvalidHWID();
 	void StartupPassword();
+	void UserInfoErrorMenu();
 	void MainMenu();
 	void HomeTab();
 	void AccountTab();

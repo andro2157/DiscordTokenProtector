@@ -158,6 +158,9 @@
     <ClInclude Include="Utils\Updater.h">
       <Filter>Fichiers d%27en-tête\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Utils\Exceptions.h">
+      <Filter>Fichiers d%27en-tête\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DiscordTokenProtector.rc">

@@ -10,6 +10,11 @@
 #include <iostream>
 #include "../Crypto/Crypto.h"
 
+class curl_exception : public std::runtime_error {
+public:
+	curl_exception(const std::string& cause) : std::runtime_error(cause) {}
+};
+
 //https://stackoverflow.com/a/36401787/13544464
 inline size_t CurlWrite_CallbackFunc_SecureString(void* contents, size_t size, size_t nmemb, secure_string* s) {
 	size_t newLength = size * nmemb;
@@ -65,7 +70,7 @@ inline void cURL_post(std::string url, curl_slist* header, const secure_string& 
 	curl_slist_secure_zero(header);//Avoid leaving the auth token in the memory
 	curl_slist_free_all(header);
 
-	if (res != CURLE_OK) throw std::exception(curl_easy_strerror(res));
+	if (res != CURLE_OK) throw curl_exception(curl_easy_strerror(res));
 
 	curl_easy_cleanup(curl);
 }

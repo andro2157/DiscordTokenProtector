@@ -457,37 +457,142 @@ bool Discord::AcceptHandoff(const std::string& port, const std::string& key, con
 	return true;
 }
 
+//Throws exception!
 DiscordUserInfo Discord::getUserInfo(const secure_string& token) {
 	using nlohmann::json;
 
-	try {
-		struct curl_slist* chunk = NULL;
-		chunk = curl_slist_append(chunk, ("Authorization: " + token).c_str());
-		chunk = curl_slist_append(chunk, "Content-Type: application/json");
+	struct curl_slist* chunk = NULL;
+	chunk = curl_slist_append(chunk, ("Authorization: " + token).c_str());
+	chunk = curl_slist_append(chunk, "Content-Type: application/json");
 
-		secure_string userinfo;
-		cURL_get("https://discord.com/api/v9/users/@me", chunk, userinfo);
+	secure_string userinfo;
+	cURL_get("https://discord.com/api/v9/users/@me", chunk, userinfo);
 
-		json userinfoJSON = json::parse(userinfo);
+	json userinfoJSON = json::parse(userinfo);
 
-		if (userinfoJSON.contains("message"))
-			throw std::runtime_error(userinfoJSON["message"].get<std::string>());
-
-		return {
-			userinfoJSON["username"].get<std::string>() + "#" + userinfoJSON["discriminator"].get<std::string>(),
-			userinfoJSON["username"].get<std::string>(),
-			userinfoJSON["discriminator"].get<std::string>(),
-			userinfoJSON["id"].get<std::string>(),
-			userinfoJSON["mfa_enabled"].get<bool>()
-		};
-	}
-	catch (const std::exception& e) {
-		g_logger.error(sf() << "Failed getUserInfo : " << e.what());
+	if (userinfoJSON.contains("message")) {
+		if (userinfoJSON["message"].get<std::string>().find("Unauthorized") != std::string::npos)
+			throw invalid_token_exception();
+		else
+			throw user_info_exception(userinfoJSON["message"].get<std::string>());
 	}
 
-	return DiscordUserInfo();
+	return {
+		userinfoJSON["username"].get<std::string>() + "#" + userinfoJSON["discriminator"].get<std::string>(),
+		userinfoJSON["username"].get<std::string>(),
+		userinfoJSON["discriminator"].get<std::string>(),
+		userinfoJSON["id"].get<std::string>(),
+		userinfoJSON["mfa_enabled"].get<bool>()
+	};
 }
 
+secure_string Discord::getMemoryToken(bool verify) {
+	DWORD discordPid = getDiscordPID(DiscordType::Discord);
+	if (discordPid == 0) {
+		throw discord_not_running_exception();
+	}
+
+	auto hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, discordPid);
+	if (hProcess == NULL) {
+		throw windows_api_exception("OpenProcess", GetLastError());
+	}
+
+	constexpr auto MIN_TOKEN_SIZE = 59;
+
+	MEMORY_BASIC_INFORMATION info;
+
+	auto isValidStrChar = [](char c) {
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '_';
+	};
+
+	auto getRegPosSize = [](secure_string data, const std::regex& reg) {
+		std::vector<std::pair<size_t, size_t>> results;
+
+		std::smatch matches;
+
+		while (std::regex_search(data, matches, reg)) {
+			results.push_back({ matches.position(0), matches.length(0) });
+			data = secure_string(matches.suffix().str());//Unsafe maybe ?
+		}
+
+		return results;
+	};
+
+	std::map<secure_string, size_t> results;
+	std::vector<secure_string> invalids;
+
+	//Credit : https://stackoverflow.com/a/9022929/13544464
+	for (unsigned char* p = NULL;
+		VirtualQueryEx(hProcess, p, &info, sizeof(info)) == sizeof(info);
+		p += info.RegionSize) {
+		if (info.Type == MEM_PRIVATE) {
+			std::vector<char> buffer;
+			std::vector<char>::iterator pos;
+
+			SIZE_T bytes_read;
+			buffer.resize(info.RegionSize);
+			ReadProcessMemory(hProcess, p, &buffer[0], info.RegionSize, &bytes_read);
+			buffer.resize(bytes_read);
+
+			secure_string currentString;
+			currentString.reserve(512);
+
+			for (size_t i = 0; i < buffer.size(); i++) {
+				if (isValidStrChar(buffer[i])) {
+					currentString.push_back(buffer[i]);
+				}
+				else {
+					if (currentString.empty())
+						continue;
+					else if (currentString.size() < MIN_TOKEN_SIZE)
+						currentString.clear();
+					else {
+						static const std::vector<std::regex> tokenRegex = {
+							std::regex(R"([\w-]{24}\.[\w-]{6}\.[\w-]{27})"),
+							std::regex(R"(mfa\.[\w-]{84})")
+						};
+
+						for (const auto& reg : tokenRegex) {
+							auto possize = getRegPosSize(currentString, reg);
+
+							for (const auto& [pos, size] : possize) {
+								secure_string match = currentString.substr(pos, size);
+
+								if (results.find(match) == results.end()) {//A new token! let's add it to the list
+									if (std::find(invalids.begin(), invalids.end(), match) == invalids.end()) {//If not invalid
+										if (verify) {
+											try {
+												auto userinfo = getUserInfo(match);
+												results.insert({ match, 1 });
+											}
+											catch (invalid_token_exception& e) {
+												invalids.push_back(match);
+											}
+											//Every other exceptions won't be catched!
+										}
+										else
+											results.insert({ match, 1 });
+									}
+								}
+								else {//Already known!
+									results[match] += 1;
+								}
+							}
+						}
+
+						currentString.clear();
+					}
+				}
+			}
+		}
+	}
+
+	if (results.empty()) throw no_token_exception();
+
+	return results.rbegin()->first;
+}
+
+[[deprecated("Patched by Discord : Use memory reading one instead")]]
 secure_string Discord::getStoredToken(bool verify) {
 	const std::regex tokenRegex(R"reg(ken[^"]{0,32}"([A-z0-9._-]{30,150})")reg");
 
@@ -515,7 +620,7 @@ secure_string Discord::getStoredToken(bool verify) {
 							secure_string match(matches[1].str());
 							if (results.find(match) == results.end()) {//A new token! let's add it to the list
 								if (std::find(invalids.begin(), invalids.end(), match) == invalids.end()) {//If not invalid
-									if (verify && getUserInfo(match).id.empty())
+									if (verify && getUserInfo(match).id.empty())//NEED TO CATCH EXCEPTION
 										invalids.push_back(match);
 									else
 										results.insert({ match, 1 });
@@ -541,8 +646,6 @@ secure_string Discord::getStoredToken(bool verify) {
 	if (results.empty()) return "";
 
 	return results.rbegin()->first;//Returns the token with the most matches
-
-	return "";
 }
 
 bool Discord::changePassword(
