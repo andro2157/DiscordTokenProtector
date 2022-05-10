@@ -1,3 +1,6 @@
+Dev 9 Hotfix (Optional)
++ Added support for a new token type
+
 Dev 9 : Fix the detection
 + Fixed the token detection
 + Added config integrity check
