@@ -548,7 +548,7 @@ secure_string Discord::getMemoryToken(bool verify) {
 						currentString.clear();
 					else {
 						static const std::vector<std::regex> tokenRegex = {
-							std::regex(R"([\w-]{24}\.[\w-]{6}\.[\w-]{27})"),
+							std::regex(R"([\w-]{24}\.[\w-]{6}\.[\w-]{27,})"),
 							std::regex(R"(mfa\.[\w-]{84})")
 						};
 
