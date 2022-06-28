@@ -199,6 +199,17 @@ namespace Menu {
 
 				ImGui::PushFont(smallFont);
 				ImGui::Text("by Andro24");
+
+				static std::string lastSystemProxy = "";
+				if (!lastSystemProxy.empty()) {
+					ImGui::SameLine();
+					ImGui::TextColored(Colors::Red, "Warning! Using system proxy!\nProxy : %s", lastSystemProxy.c_str());
+				}
+
+				if (ImGui::GetFrameCount() % 10 == 0) {
+					lastSystemProxy = ws2s(getWindowsProxy());
+				}
+
 				ImGui::PopFont();
 
 				ImGui::Unindent();

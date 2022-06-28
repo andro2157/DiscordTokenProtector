@@ -6,6 +6,10 @@
 #include "Menu/Menu.h"
 #include "Context.h"
 
+#include "Utils/CurlUtils.h"
+
+//#include <cpr/cpr.h>
+
 void mainInit() {
     try {
 #ifdef _PROD
