@@ -36,6 +36,20 @@ namespace Crypto {
 	constexpr auto YUBIKEY_KEY_FILE = L"yk.dat";
 	constexpr auto YUBIKEY_DATA_LEN = 256;
 
+	class YubiKeyFile {
+	public:
+		YubiKeyFile();
+		~YubiKeyFile();
+
+		CryptoPP::SecByteBlock generateKeyFile();
+		CryptoPP::SecByteBlock readKeyFile();
+
+	private:
+		std::fstream m_file;
+	};
+
+	extern YubiKeyFile g_yubiFile;
+
 	class Yubi {
 	public:
 		Yubi();
@@ -51,9 +65,6 @@ namespace Crypto {
 		ykpiv_rc getLastError() const { return m_err; }
 
 		std::string getModelName() const;
-
-		static CryptoPP::SecByteBlock generateKeyFile();
-		static CryptoPP::SecByteBlock readKeyFile();
 
 	private:
 		void throwOnError(ykpiv_rc err, const std::string& action);

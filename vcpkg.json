@@ -8,7 +8,10 @@
     },
     "nlohmann-json",
     "cryptopp",
-    "curl",
+    {
+      "name": "curl",
+      "features": ["openssl"]
+    },
     "polyhook2",
     "gl3w"
   ]

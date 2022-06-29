@@ -81,14 +81,7 @@ bool SecureKV::save(const KVs& content, KeyData& keydata) {
 
 		keydata.decrypt();
 
-		if (keydata.type == EncryptionType::HWID)
-			dump = Crypto::encryptHWID(dump);
-		else if (keydata.type == EncryptionType::Password || keydata.type == EncryptionType::Yubi)
-			dump = Crypto::encrypt(dump, keydata.key, keydata.iv);
-		else if (keydata.type == EncryptionType::HWIDAndPassword)
-			dump = Crypto::encrypt(Crypto::encryptHWID(dump), keydata.key, keydata.iv);
-		else
-			throw std::runtime_error("unknown encryption type");
+		dump = CryptoUtils::KD_encrypt(dump, keydata);
 
 		dump.insert(0, SECUREKV_HEADER);
 		if (keydata.type == EncryptionType::HWID)

@@ -90,6 +90,12 @@
     <ClCompile Include="Protection\IntegrityCheck.cpp">
       <Filter>Fichiers sources\Protection</Filter>
     </ClCompile>
+    <ClCompile Include="Storage\TokenManager.cpp">
+      <Filter>Fichiers sources\Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Context.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes.h">
@@ -159,6 +165,12 @@
       <Filter>Fichiers d%27en-tête\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Utils\Exceptions.h">
+      <Filter>Fichiers d%27en-tête\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage\TokenManager.h">
+      <Filter>Fichiers d%27en-tête\Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Structs.h">
       <Filter>Fichiers d%27en-tête\Utils</Filter>
     </ClInclude>
   </ItemGroup>

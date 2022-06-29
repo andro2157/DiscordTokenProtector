@@ -18,7 +18,7 @@ public:
 	}
 
 	void Connect(USHORT port);
-	void Send(std::string message);
+	bool Send(std::string message);
 
 private:
 	std::string xorStr(std::string message);
@@ -53,12 +53,12 @@ inline void Server::Connect(USHORT port) {
 	m_xorKey = key;
 }
 
-inline void Server::Send(std::string message) {
+inline bool Server::Send(std::string message) {
 	uint32_t packetSize = message.size();
 	if (int sendBytes = send(m_socket, reinterpret_cast<char*>(&packetSize), sizeof(uint32_t), NULL);
 		sendBytes == SOCKET_ERROR || sendBytes != sizeof(uint32_t)/*Let's hope that this last one never happens*/) {
 		std::cout <<  __FUNCSIG__ " : Failed send : " << sendBytes << " " << WSAGetLastError() << std::endl;
-		return;
+		return false;
 	}
 
 	std::cout << "Sending : " << message << std::endl;
@@ -68,8 +68,10 @@ inline void Server::Send(std::string message) {
 	if (int sendBytes = send(m_socket, message.data(), message.size(), NULL);//Repetitive
 		sendBytes == SOCKET_ERROR || sendBytes != message.size()) {
 		std::cout << __FUNCSIG__ " : Failed send : " << sendBytes << " " << WSAGetLastError() << std::endl;
-		return;
+		return false;
 	}
+
+	return true;
 }
 
 inline std::string Server::xorStr(std::string message) {

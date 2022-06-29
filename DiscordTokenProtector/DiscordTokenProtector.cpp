@@ -6,6 +6,10 @@
 #include "Menu/Menu.h"
 #include "Context.h"
 
+#include "Utils/CurlUtils.h"
+
+#include "Storage/TokenManager.h"
+
 void mainInit() {
     try {
 #ifdef _PROD

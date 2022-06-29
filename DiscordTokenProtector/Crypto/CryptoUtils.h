@@ -4,6 +4,7 @@
 #include <cryptopp/hex.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/sha.h>
+#include <cryptopp/base64.h>
 
 enum class EncryptionType {
 	HWID,
@@ -27,7 +28,7 @@ struct KeyData {
 	bool isEncrypted = false;
 	
 	/*
-	Note: the size of key and iv won't be changed since they are should be multiples of CRYPTPROTECTMEMORY_BLOCK_SIZE (16)
+	Note: the size of key and iv won't be changed since they should be multiples of CRYPTPROTECTMEMORY_BLOCK_SIZE (16)
 	*/
 	void encrypt() {
 		if (isEncrypted) return;
@@ -53,6 +54,9 @@ static KeyData HWID_kd({ EncryptionType::HWID, CryptoPP::SecByteBlock(16), Crypt
 namespace CryptoUtils {
 	constexpr auto ALPHANUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	constexpr auto ALPHANUM_LEN = 26 * 2 + 10;
+
+	constexpr auto PASSCHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!/:.;,?*$%-_()[]{}";
+	constexpr auto PASSCHARS_LEN = 80;
 
 	inline secure_string secureRandomString(size_t len, const char* charRange = ALPHANUM, size_t charRangeLen = ALPHANUM_LEN) {
 		using namespace CryptoPP;
@@ -110,5 +114,65 @@ namespace CryptoUtils {
 		hash.Final((byte*)&digest[0]);
 
 		return toHex(digest);
+	}
+
+	inline secure_string KD_encrypt(const secure_string& data, KeyData keydata) {
+		if (keydata.type == EncryptionType::HWID)
+			return Crypto::encryptHWID(data);
+		else if (keydata.type == EncryptionType::Password || keydata.type == EncryptionType::Yubi)
+			return Crypto::encrypt(data, keydata.key, keydata.iv);
+		else if (keydata.type == EncryptionType::HWIDAndPassword)
+			return Crypto::encrypt(Crypto::encryptHWID(data), keydata.key, keydata.iv);
+		else
+			throw std::runtime_error("unknown encryption type");
+	}
+
+	inline secure_string KD_decrypt(const secure_string& data, KeyData keydata) {
+		if (keydata.type == EncryptionType::HWID)
+			return Crypto::decryptHWID(data);
+		else if (keydata.type == EncryptionType::Password || keydata.type == EncryptionType::Yubi)
+			return Crypto::decrypt(data, keydata.key, keydata.iv);
+		else if (keydata.type == EncryptionType::HWIDAndPassword)
+			return Crypto::decryptHWID(Crypto::decrypt(data, keydata.key, keydata.iv));
+		else
+			throw std::runtime_error("unknown encryption type");
+	}
+
+	inline secure_string toBase64(const secure_string& in) {
+		using namespace CryptoPP;
+		secure_string out;
+
+		Base64Encoder encoder;
+		encoder.Put(reinterpret_cast<const byte*>(in.data()), in.size());
+		encoder.MessageEnd();
+
+		auto size = encoder.MaxRetrievable();
+		out.resize(size);
+		encoder.Get(reinterpret_cast<byte*>(out.data()), out.size());
+
+		return out;
+	}
+
+	inline secure_string fromBase64(const secure_string& in) {
+		using namespace CryptoPP;
+
+		secure_string out;
+
+		Base64Decoder decoder;
+		decoder.Put(reinterpret_cast<const byte*>(in.data()), in.size());
+		decoder.MessageEnd();
+
+		auto size = decoder.MaxRetrievable();
+		out.resize(size);
+		decoder.Get(reinterpret_cast<byte*>(out.data()), out.size());
+
+		return out;
+	}
+
+	inline void printSecByteBlock(const CryptoPP::SecByteBlock& data) {
+		for (const auto& c : data) {
+			std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<uint16_t>(c) << " ";
+		}
+		std::cout << std::dec << std::endl;
 	}
 }

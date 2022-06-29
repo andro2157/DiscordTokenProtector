@@ -10,6 +10,8 @@
 #include "shellapi.h"
 #include "../resource.h"
 
+#include "../Storage/TokenManager.h"
+
 //#include <shellscalingapi.h>
 //
 //#pragma comment(lib, "Shcore.lib")
@@ -199,6 +201,17 @@ namespace Menu {
 
 				ImGui::PushFont(smallFont);
 				ImGui::Text("by Andro24");
+
+				static std::string lastSystemProxy = "";
+				if (!lastSystemProxy.empty()) {
+					ImGui::SameLine();
+					ImGui::TextColored(Colors::Red, "Warning! Using system proxy!\nProxy : %s", lastSystemProxy.c_str());
+				}
+
+				if (ImGui::GetFrameCount() % 10 == 0) {
+					lastSystemProxy = ws2s(getWindowsProxy());
+				}
+
 				ImGui::PopFont();
 
 				ImGui::Unindent();
@@ -358,7 +371,7 @@ namespace Menu {
 						return;
 					}
 
-					password = yk->signData(Crypto::Yubi::readKeyFile());
+					password = yk->signData(Crypto::g_yubiFile.readKeyFile());
 				}
 				catch (std::exception& e) {
 					ykRetries = yk->getRetryCount();
@@ -376,10 +389,11 @@ namespace Menu {
 			g_context.kd.iv = Crypto::derivateKey(password, CryptoPP::AES::BLOCKSIZE * 16, iterations_iv);
 			g_context.kd.encrypt();
 
-			secure_string token = g_secureKV->read("token", g_context.kd);
-			if (token.empty()) {
+			try {
+				g_tokenManager.init();
+			}
+			catch (empty_securekv_data_exception& e) {
 				g_context.kd.reset();
-				token.clear();
 
 				//TODO proper ImGui thing
 				MessageBoxA(NULL,
@@ -394,33 +408,38 @@ namespace Menu {
 #endif
 				return;
 			}
-			else {
-				try {
-					Discord::getUserInfo(token);
-				}
-				catch (curl_exception& e) {
-					MessageBoxA(NULL, "Failed to fetch user info, please check your internet connection", "Discord Token Protector", MB_ICONWARNING | MB_OK);
-					return;
-				}
-				catch (invalid_token_exception& e) {
-					MessageBoxA(NULL, "The token is invalid and has been removed from DTP.\
-							Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
-					g_secureKV->reopenFile(true);//Reset
+
+			try {
+				g_tokenManager.updateCurrentCachedInfo(Discord::getUserInfo(g_tokenManager.getCurrentToken()));
+			}
+			catch (curl_exception& e) {
+				MessageBoxA(NULL, "Failed to fetch user info, please check your internet connection.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+				return;
+			}
+			catch (invalid_token_exception& e) {
+				MessageBoxA(NULL, "The selected token is invalid and has been removed from DTP.\
+						Please check the log for more info.", "Discord Token Protector", MB_ICONSTOP | MB_OK);
+				g_tokenManager.removeToken(g_tokenManager.getCurrentIndex());
+				if (g_tokenManager.size() == 0) {
+					g_secureKV->reopenFile(true);//Remove KV, redo setup
 					ExitProcess(0);
 				}
-				catch (std::exception& e) {
-					MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
-					return;
+				else {
+					g_tokenManager.setIndex(0);
 				}
-
-				g_context.state = State::TokenSecure;
-
-				//Clean the local storage and session storage (just in case)
-				g_context.remover_LocalStorage.Remove();
-				g_context.remover_SessionStorage.Remove();
-				g_context.remover_canary_LocalStorage.Remove();
-				g_context.remover_canary_SessionStorage.Remove();
 			}
+			catch (std::exception& e) {
+				MessageBoxA(NULL, e.what(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+				return;
+			}
+
+			g_context.state = State::TokenSecure;
+
+			//Clean the local storage and session storage (just in case)
+			g_context.remover_LocalStorage.Remove();
+			g_context.remover_SessionStorage.Remove();
+			g_context.remover_canary_LocalStorage.Remove();
+			g_context.remover_canary_SessionStorage.Remove();
 
 			if (g_config->read<bool>("auto_start"))
 				startAsync.start();
@@ -482,7 +501,7 @@ namespace Menu {
 			ImGui::TextWrapped("DTP is not affiliated with Discord.");
 			ImGui::TextWrapped("DTP is in NO way responsible for what can happen on your Discord account.");
 			ImGui::TextWrapped("Chances of getting terminated using DTP are very low, but"
-				"please keep in mind that using a thirdparty software is against Discord\'s TOS.");
+				"please keep in mind that using a third-party software is against Discord\'s TOS.");
 
 
 			ImGui::NewLine();
@@ -564,7 +583,7 @@ namespace Menu {
 				ImGui::TextColored(Colors::GrayPurple, "Retrying...");
 			}
 
-			if (step > 5)
+			if (step > 15)
 				ImGui::TextWrapped("If the detection doesn\'t work, please make a ticket on GitHub.");
 		}
 		else if (g_context.state == State::DiscoveredToken) {
@@ -726,7 +745,7 @@ namespace Menu {
 								return;
 							}
 
-							password = yk->signData(Crypto::Yubi::generateKeyFile());
+							password = yk->signData(Crypto::g_yubiFile.generateKeyFile());
 						}
 						catch (std::exception& e) {
 							ykRetries = yk->getRetryCount();
@@ -750,7 +769,7 @@ namespace Menu {
 					g_config->write("iterations_iv", iterations_iv);
 				}
 
-				g_secureKV->write("token", detectedToken, g_context.kd);
+				g_tokenManager.firstSetup(detectedToken, userInfo);
 				detectedToken.clear();
 
 				//Clean the local storage and session storage
@@ -821,7 +840,7 @@ namespace Menu {
 				HomeTab();
 				ImGui::EndTabItem();
 			}
-			if (ImGui::BeginTabItem("Account")) {
+			if (ImGui::BeginTabItem("Accounts")) {
 				AccountTab();
 				ImGui::EndTabItem();
 			}
@@ -905,6 +924,12 @@ namespace Menu {
 					ImGui::PopItemFlag();
 					ImGui::LinearIndeterminateBar("stopprogress", ImVec2(108, 10));
 				}
+				else if (g_context.m_protectionState == ProtectionStates::Restart) {
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::Button("Restarting Discord...", ImVec2(150, 50));
+					ImGui::PopItemFlag();
+					ImGui::LinearIndeterminateBar("restartprogress", ImVec2(158, 10));
+				}
 				else if (g_context.m_running) {
 					if (ImGui::Button("Stop", ImVec2(100, 50)))
 						stopAsync.start();
@@ -912,6 +937,13 @@ namespace Menu {
 						ImGui::SameLine();
 						if (ImGui::Button("Start Discord", ImVec2(150, 50))) {
 							g_discord->startSuspendedDiscord(DiscordType::Discord);
+						}
+					}
+					else if (g_context.m_protectionState == ProtectionStates::LoggedIn &&
+						g_context.m_currentDiscordID != g_tokenManager.getCurrentCachedInfo().id) {
+						ImGui::SameLine();
+						if (ImGui::Button("Restart Discord to\nthe selected account", ImVec2(200, 50))) {
+							g_context.m_protectionState = ProtectionStates::Restart;
 						}
 					}
 				}
@@ -932,135 +964,276 @@ namespace Menu {
 
 	void AccountTab() {
 		if (ImGui::BeginChild("AccountTab")) {
-			//TODO merge with existing code
-			static DiscordUserInfo info;
-			static EasyAsync getInfoAsync([]() {
-				try {
-					info = Discord::getUserInfo(g_secureKV->read("token", g_context.kd));
-				}
-				catch (...) {//TODO change
-					info = DiscordUserInfo();
-					info.fullUsername = "Error please retry";
-				}
-			}, true);
+			static bool addingAccount = false;
+			if (addingAccount) {
+				//TODO combine with setup code
+				static secure_string detectedToken;
+				static DiscordUserInfo userInfo;
+				static Timer updateTimer;
 
-			ImGui::Text("Your account:");
-			ImGui::SameLine();
-			if (ImGui::Button("Refresh")) getInfoAsync.start();
+				static int step = 0;
 
-			ImGui::NewLine();
+				static std::string error;
 
-			if (info.id.empty()) {
-				ImGui::Text("Getting user info...");
-			}
-			else {
-				ImGui::Text("Username : %s", info.fullUsername.c_str());
-				ImGui::Text("id : %s", info.id.c_str());
+				static std::future<void> tokenDetectionFuture;
 
-				if (info.mfa) {
-					ImGui::TextColored(Colors::Green, "Your account is secured with 2FA!");
-				}
-				else {
-					ImGui::TextColored(Colors::Red, "It is recommended to secure your account with 2FA!");
-					if (ImGui::Button("Secure it!")) {
-						ShellExecute(0, 0, TEXT("https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"), 0, 0, SW_SHOW);
-					}
-				}
-			}
+				static EasyAsync killDiscordAsync([]() {
+					stopAsync.start();
+					stopAsync.wait();
+					Discord::killDiscord();
+				}, true);
 
-			ImGui::NewLine();
-
-			if (ImGui::CollapsingHeader("Change the account password")) {
-				/*
-				Using std::unique_ptr<secure_string> instead of char[] doesn't seem to fix the issue with
-				the content not being zero'd.
-				It might be due to ImGui that copies the content
-				*/
-				static std::unique_ptr<secure_string> passwordInput;
-				static std::unique_ptr<secure_string> newPasswordInput;
-				static std::unique_ptr<secure_string> mfaInput;
-
-				auto resetInputs = [&]() {
-					passwordInput = std::make_unique<secure_string>(256, '\000');
-					newPasswordInput = std::make_unique<secure_string>(256, '\000');
-					mfaInput = std::make_unique<secure_string>(10, '\000');
+				auto startDetection = []() {
+					tokenDetectionFuture = std::async(std::launch::async, []() {
+						detectedToken = g_discord->getMemoryToken(true);
+						userInfo = Discord::getUserInfo(detectedToken);
+						});
 				};
 
-				if (!passwordInput || !newPasswordInput) resetInputs();
+				auto detectionReady = []() {
+					return tokenDetectionFuture.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready;
+				};
 
-				static int newRandomPassword = 0;
-				static int randomPasswordLen = 16;
+				auto reset = []() {
+					secure_string().swap(detectedToken);
+					userInfo = DiscordUserInfo();
+					updateTimer.reset();
+					step = 0;
+					error.clear();
+					addingAccount = false;
+				};
 
-				static EasyAsync asyncChangePassword([&]() {
-					removeTaillingNulls(*passwordInput);
-					removeTaillingNulls(*newPasswordInput);
-					removeTaillingNulls(*mfaInput);
-
-					secure_string error;
-					if (Discord::changePassword(g_secureKV->read("token", g_context.kd),
-						*passwordInput, *newPasswordInput, *mfaInput, error)) {
-						g_secureKV->write("token", error, g_context.kd);
-						g_logger.info(newPasswordInput->c_str());
-
-						if (newRandomPassword == 0) {
-							MessageBoxA(NULL, "Your new password has been copied to your clipboard. Please restart Discord to log back in!", "Success", MB_OK | MB_ICONINFORMATION);
-							ImGui::SetClipboardText(newPasswordInput->c_str());
-						}
-						else {
-							MessageBoxA(NULL, "Successfully changed the password", "Success", MB_OK | MB_ICONINFORMATION);
-						}
-
-						g_logger.info("Successfully changed password!");
-					}
-					else {
-						MessageBoxA(NULL, error.c_str(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
-					}
-
-					resetInputs();
-				});
-
-				ImGui::InputText("Current Password", passwordInput->data(), 256, ImGuiInputTextFlags_Password);
-
-				//If we change the mode, we reset the new password input
-				if (ImGui::Combo("New password mode", &newRandomPassword, "Random (recommended)\0Manual\0\0"))
-					newPasswordInput = std::make_unique<secure_string>(265, '\000');
-
-				if (newRandomPassword == 0) {
-					ImGui::SliderInt("New password length", &randomPasswordLen, 12, 32);
-				}
-				else {
-					ImGui::InputText("New Password", newPasswordInput->data(), 256, ImGuiInputTextFlags_Password);
-				}
-
-				if (info.mfa) {
-					ImGui::InputText("2FA code", mfaInput->data(), 10);
-				}
-
-				if (asyncChangePassword.isRunning()) {
-					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-					ImGui::Button("Changing password...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
-					ImGui::PopItemFlag();
+				if (killDiscordAsync.isRunning()) {
+					ImGui::Text("Closing Discord...");
+					ImGui::NewLine();
 					ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
 				}
 				else {
-					if (ImGui::Button("Change!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
-						if (newRandomPassword == 0)
-							newPasswordInput = std::make_unique<secure_string>(CryptoUtils::secureRandomString(std::clamp(randomPasswordLen, 12, 32)));
-						if (!info.mfa)
-							mfaInput->clear();
+					if (updateTimer.getElapsed<std::chrono::milliseconds>() > 1000) {
+						if (g_context.m_running)
+							stopAsync.start();
 
-						asyncChangePassword.start();
+						if (step == 0) {
+							if (g_discord->isDiscordRunning() != DiscordType::None) {
+								step = 1;
+								startDetection();
+							}
+						}
+						else {
+							if (detectionReady()) {
+								try {
+									error.clear();
+									tokenDetectionFuture.get();
+									
+									g_tokenManager.addToken(detectedToken, userInfo);
+									Discord::killDiscord();
+									reset();
+								}
+								catch (curl_exception& e) {
+									error = "Please check your internet connection : " + std::string(e.what());
+								}
+								catch (discord_not_running_exception& e) {
+									error = "Please run Discord";
+								}
+								catch (no_token_exception& e) {
+									error = "Unable to find token in memory";
+								}
+
+								if (!error.empty()) {
+									startDetection();
+									step++;
+								}
+							}
+						}
+
+						updateTimer.reset();
 					}
+
+					ImGui::TextWrapped("Please follow these steps : ");
+					ImGui::NewLine();
+					ImGui::TextColored(step > 0 ? Colors::Green : Colors::GrayPurple, "* Launch the Discord app and connect to your account.");
+					ImGui::TextColored(Colors::GrayPurple, "* Wait for us to detect your token.");
+					ImGui::NewLine();
+
+					if (ImGui::Button("Cancel")) {
+						reset();
+					}
+
+					if (!error.empty()) {
+						ImGui::TextColored(Colors::Red, "Error :");
+						ImGui::TextWrapped(error.c_str());
+						ImGui::TextColored(Colors::GrayPurple, "Retrying...");
+					}
+
+					if (step > 15)
+						ImGui::TextWrapped("If the detection doesn\'t work, please make a ticket on GitHub.");
 				}
 			}
+			else {
+				static bool disableSelection = false;
+				static int selectedAccount = g_tokenManager.getCurrentIndex();
+				static DiscordUserInfo selectedInfo = g_tokenManager.getCurrentCachedInfo();
 
-			ImGui::NewLine();
+				static EasyAsync getInfoAsync([]() {
+					disableSelection = true;
+					try {
+						int idx = selectedAccount;
+						selectedInfo = Discord::getUserInfo(g_tokenManager.getCurrentToken());
+						g_tokenManager.updateCachedInfo(idx, selectedInfo);
+					}
+					catch (...) {//TODO change
+						selectedInfo = DiscordUserInfo();
+						selectedInfo.fullUsername = "Error please retry";
+					}
+					disableSelection = false;
+				}, true);
 
-			//TODO Red & confirmation button
-			if (ImGui::Button("Remove Token")) {
-				g_secureKV->reopenFile(true);
-				MessageBoxA(NULL, "The token has been removed.\nPlease restart Discord Token Protector", "Discord Token Protector", MB_ICONINFORMATION | MB_OK);
-				ExitProcess(0);
+				if (ImGui::BeginChild("AccountSelector", ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.f), true)) {
+					ImGui::Text("Accounts");
+					ImGui::SameLine();
+					if (ImGui::Button("Add")) {
+						addingAccount = true;
+					}
+
+					for (size_t i = 0; i < g_tokenManager.size(); i++) {
+						const bool sel = i == selectedAccount;
+						if (ImGui::Selectable(g_tokenManager.getCachedInfo(i).fullUsername.c_str(), sel,
+							disableSelection ? ImGuiSelectableFlags_Disabled : ImGuiSelectableFlags_None) && !disableSelection) {
+							selectedAccount = i;
+							selectedInfo = g_tokenManager.getCachedInfo(i);
+							g_tokenManager.setIndex(i);
+						}
+					}
+
+					ImGui::EndChild();
+				}
+				ImGui::SameLine();
+				if (ImGui::BeginChild("AccountInfo", ImVec2(0.f, 0.f), true)) {
+					ImGui::Text("Selected account info");
+
+					ImGui::Text("Username : %s", selectedInfo.fullUsername.c_str());
+					ImGui::Text("id : %s", selectedInfo.id.c_str());
+
+					if (selectedInfo.mfa) {
+						ImGui::TextColored(Colors::Green, "Your account is secured with 2FA!");
+					}
+					else {
+						ImGui::TextColored(Colors::Red, "It is recommended to secure your account with 2FA!");
+						if (ImGui::Button("Secure it!")) {
+							ShellExecute(0, 0, TEXT("https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"), 0, 0, SW_SHOW);
+						}
+					}
+
+					if (ImGui::Button("Refresh")) getInfoAsync.start();
+
+					ImGui::NewLine();
+
+					if (ImGui::CollapsingHeader("Change the account password")) {
+						/*
+						Using std::unique_ptr<secure_string> instead of char[] doesn't seem to fix the issue with
+						the content not being zero'd.
+						It might be due to ImGui that copies the content
+						*/
+						static std::unique_ptr<secure_string> passwordInput;
+						static std::unique_ptr<secure_string> newPasswordInput;
+						static std::unique_ptr<secure_string> mfaInput;
+
+						auto resetInputs = [&]() {
+							passwordInput = std::make_unique<secure_string>(256, '\000');
+							newPasswordInput = std::make_unique<secure_string>(256, '\000');
+							mfaInput = std::make_unique<secure_string>(10, '\000');
+						};
+
+						if (!passwordInput || !newPasswordInput) resetInputs();
+
+						static int newRandomPassword = 0;
+						static int randomPasswordLen = 16;
+
+						static EasyAsync asyncChangePassword([&]() {
+							disableSelection = true;
+							removeTaillingNulls(*passwordInput);
+							removeTaillingNulls(*newPasswordInput);
+							removeTaillingNulls(*mfaInput);
+
+							secure_string error;
+							if (Discord::changePassword(g_tokenManager.getCurrentToken(),
+								*passwordInput, *newPasswordInput, *mfaInput, error)) {
+								g_tokenManager.updateCurrentToken(error);
+
+								if (newRandomPassword == 0) {
+									MessageBoxA(NULL, "Your new password has been copied to your clipboard. Please restart Discord to log back in!", "Success", MB_OK | MB_ICONINFORMATION);
+									ImGui::SetClipboardText(newPasswordInput->c_str());
+								}
+								else {
+									MessageBoxA(NULL, "Successfully changed the password", "Success", MB_OK | MB_ICONINFORMATION);
+								}
+
+								g_logger.info("Successfully changed password!");
+							}
+							else {
+								MessageBoxA(NULL, error.c_str(), "Discord Token Protector", MB_ICONWARNING | MB_OK);
+							}
+
+							resetInputs();
+							disableSelection = false;
+							});
+
+						ImGui::InputText("Current Pass", passwordInput->data(), 256, ImGuiInputTextFlags_Password);
+
+						//If we change the mode, we reset the new password input
+						if (ImGui::Combo("New password mode", &newRandomPassword, "Random (recommended)\0Manual\0\0"))
+							newPasswordInput = std::make_unique<secure_string>(265, '\000');
+
+						if (newRandomPassword == 0) {
+							ImGui::SliderInt("New password length", &randomPasswordLen, 12, 32);
+						}
+						else {
+							ImGui::InputText("New Password", newPasswordInput->data(), 256, ImGuiInputTextFlags_Password);
+						}
+
+						if (selectedInfo.mfa) {
+							ImGui::InputText("2FA code", mfaInput->data(), 10);
+						}
+
+						if (asyncChangePassword.isRunning()) {
+							ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+							ImGui::Button("Changing password...", ImVec2(ImGui::GetWindowWidth() - 30, 30));
+							ImGui::PopItemFlag();
+							ImGui::LinearIndeterminateBar("progressindicator", ImVec2(ImGui::GetWindowWidth() - 22, 10));
+						}
+						else {
+							if (ImGui::Button("Change!", ImVec2(ImGui::GetWindowWidth() - 30, 30))) {
+								if (newRandomPassword == 0)
+									newPasswordInput = std::make_unique<secure_string>(
+										CryptoUtils::secureRandomString(std::clamp(randomPasswordLen, 12, 32),
+											CryptoUtils::PASSCHARS, CryptoUtils::PASSCHARS_LEN));
+								if (!selectedInfo.mfa)
+									mfaInput->clear();
+
+								asyncChangePassword.start();
+							}
+						}
+					}
+
+					ImGui::NewLine();
+
+					//TODO Red & confirmation button
+					if (ImGui::Button("Remove Token")) {
+						g_tokenManager.removeToken(selectedAccount);
+						if (g_tokenManager.size() == 0) {
+							g_secureKV->reopenFile(true);
+							MessageBoxA(NULL, "The token has been removed.\nPlease restart Discord Token Protector", "Discord Token Protector", MB_ICONINFORMATION | MB_OK);
+							ExitProcess(0);
+						}
+						else {
+							g_tokenManager.setIndex(0);
+							selectedAccount = 0;
+							selectedInfo = g_tokenManager.getCurrentCachedInfo();
+						}
+					}
+
+					ImGui::EndChild();
+				}
 			}
 
 			ImGui::EndChild();
@@ -1255,7 +1428,7 @@ namespace Menu {
 									return;
 								}
 
-								password = yk->signData(Crypto::Yubi::generateKeyFile());
+								password = yk->signData(Crypto::g_yubiFile.generateKeyFile());
 							}
 							catch (std::exception& e) {
 								ykRetries = yk->getRetryCount();
@@ -1278,9 +1451,12 @@ namespace Menu {
 						g_config->write("iterations_iv", iterations_iv);
 					}
 
+					//g_tokenManager.updateKD(newKeydata, g_context.kd);
 					g_secureKV->reencrypt(g_context.kd, newKeydata);
 					g_context.kd = newKeydata;
 					g_context.kd.encrypt();
+
+					g_tokenManager.init();
 
 					MessageBoxA(NULL, "Successfully reencrypted!", "Success", MB_OK | MB_ICONINFORMATION);
 				});

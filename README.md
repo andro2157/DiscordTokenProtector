@@ -9,7 +9,7 @@
   <img width="500" src="Assets/DiscordTokenProtectorUI.png">
 </p>
 
-This project is still under development! You might face some unstability issues!\
+This project is still under development! You might face some instability issues!\
 This is in **NO** way a perfect solution against Discord token grabbers.
 But this will protect you against most token grabbers:
 - (Most common) LevelDB reading *(from the beginning)*
@@ -20,16 +20,17 @@ But this will protect you against most token grabbers:
 
 ## [✔️Good practices when using DTP](goodpractice.md)
 
-### ⚠️ Disclamer
+### ⚠️ Disclaimer
 **DTP is not affiliated with Discord.**\
 **DTP is in NO way responsible for what can happen on your Discord account.**\
-**Chances of getting terminated using DTP are very low, but please keep in mind that using a thirdparty software is against Discord's TOS.**
+**Chances of getting terminated using DTP are very low, but please keep in mind that using third-party software is against Discord's TOS.**
 
 
 ## Features
 
 #### ✅ Protect your self from most token grabbers
 #### ✅ Securely store your Discord token in an encrypted file (YubiKeys* are supported)
+#### ✅ Switch easily between multiple accounts
 #### ✅ Change your Discord password in one-click
 #### ✅ Check the integrity of your Discord installation on launch (BetterDiscord is supported)
 #### ✅ Check scripts for known malwares *(eg AnarchyGrabber3)*
@@ -49,14 +50,14 @@ But this will protect you against most token grabbers:
 
 ## What does it do?
 
-Here's a little diagram on how it works:
+Here's a little diagram of how it works:
 
 <p align="center">
   <img width="800" src="Assets/how_does_it_work.jpg">
 </p>
 
-It basically removes the `Local Storage` and `Session Storage` directories from `%appdata%\Discord`.
-These directories can store your Discord token (used to authentificate you).
+It removes the `Local Storage` and `Session Storage` directories from `%appdata%\Discord`.
+These directories can store your Discord token (used to authenticate you).
 Most of the grabbers look for your token there. Therefore, by removing these directories you can avoid getting grabbed.\
 Your Discord token is stored in a secure container encrypted with AES-256.
 
@@ -64,13 +65,13 @@ Your Discord token is stored in a secure container encrypted with AES-256.
 
 * By removing these directories, Discord cannot store any local settings.
 Meaning that all of your client-specific settings will be removed each time you start Discord. (eg. keybinds, default audio device, ...)\
-**BUT**, all of the server-sided settings are still saved. (users descriptions, language, dark mode, ...)
+**BUT**, all of the server-side settings are still saved. (users descriptions, language, dark mode, ...)
 
-* Discord canary might not work properly. These builds doesn't support handoff login.
+* Discord canary might not work properly. These builds don't support handoff login.
 
-* Again, this is a project in development, you might face some unstabilities (crash, discord not launching, ...). Please report these issues on this repo.
+* Again, this is a project in development, and you might face some instabilities (crash, discord not launching, ...). Please report these issues on this repo.
 
-* Some anti-virus flags DiscordTokenProtector because it can start with Windows, and that it can inject payload into Discord.
+* Some anti-virus flags DiscordTokenProtector because it can start with Windows and it can inject payload into Discord.
 These activities are suspicious for AVs. I provided builds without the auto-startup, it reduces the amount of false-flag.
 
 * DiscordTokenProtector doesn't seem to work well on Windows 7
@@ -96,7 +97,7 @@ vcpkg integrate install
 ### Step 2: Installing the libraries
 Copy and paste this (in the vcpkg directory if you don't have it in the PATH)
 ```
-vcpkg install imgui:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[opengl3-binding]:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[win32-binding]:x86-windows-static nlohmann-json:x86-windows-static cryptopp:x86-windows-static curl:x86-windows-static polyhook2:x86-windows-static
+vcpkg install imgui:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[opengl3-binding]:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[win32-binding]:x86-windows-static nlohmann-json:x86-windows-static cryptopp:x86-windows-static curl[openssl]:x86-windows-static polyhook2:x86-windows-static gl3w:x86-windows-static
 ```
 *This process might take some time as it's building these libraries (for the static link)*
 
@@ -111,7 +112,7 @@ Open `DiscordTokenProtector.sln`
 Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config in **x86**.
 
 ### (Optional) Step 5: Compile with YubiKey support
-* Download the latest yubico-piv-tool source code here : https://developers.yubico.com/yubico-piv-tool/Releases/ \
+* Download the latest yubico-piv-tool source code here: https://developers.yubico.com/yubico-piv-tool/Releases/ \
 **Don't clone from the repo, it won't compile on Windows!**
 * Follow the instructions [here](https://github.com/Yubico/yubico-piv-tool#building-on-windows) to create the project.
 * Open the generated .sln file in Visual Studio.
