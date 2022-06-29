@@ -478,7 +478,9 @@
     <ClCompile Include="Menu\ImGuiAddon.cpp" />
     <ClCompile Include="Menu\Menu.cpp" />
     <ClCompile Include="Storage\Config.cpp" />
+    <ClCompile Include="Context.cpp" />
     <ClCompile Include="Storage\SecureKV.cpp" />
+    <ClCompile Include="Storage\TokenManager.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
     <ClCompile Include="Network\NetworkManager.cpp" />
     <ClCompile Include="Protection\FileCert.cpp" />
@@ -489,6 +491,8 @@
     <ClInclude Include="Context.h" />
     <ClInclude Include="Crypto\Crypto.h" />
     <ClInclude Include="Crypto\CryptoUtils.h" />
+    <ClInclude Include="Utils\Structs.h" />
+    <ClInclude Include="Storage\TokenManager.h" />
     <ClInclude Include="Utils\Exceptions.h" />
     <ClInclude Include="Protection\IntegrityCheck.h" />
     <ClInclude Include="Menu\Colors.h" />

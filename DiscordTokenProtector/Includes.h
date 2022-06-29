@@ -17,6 +17,7 @@
 #include "Utils/Logger.h"
 #include "Utils/Timer.h"
 #include "Utils/Exceptions.h"
+#include "Utils/Structs.h"
 
 #define FATALERROR(msg)\
 	{\
@@ -27,7 +28,7 @@ __forceinline void FATALERROR_STR(std::string str) {
 	FATALERROR(str.c_str());
 }
 
-#define VER "dev-9-fix"
+#define VER "dev-10"
 
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "crypt32.lib")

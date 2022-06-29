@@ -1,3 +1,8 @@
+Dev 10 : Multiaccount support
++ Added multi account support
++ Added system proxy support
++ Fixed minor bugs
+
 Dev 9 Hotfix (Optional)
 + Added support for a new token type
 

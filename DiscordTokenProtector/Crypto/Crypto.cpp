@@ -140,6 +140,41 @@ namespace Crypto {
 	}
 
 #ifdef YUBIKEYSUPPORT
+	YubiKeyFile g_yubiFile;
+
+	YubiKeyFile::YubiKeyFile() {
+		if (!std::filesystem::exists(Config::getConfigPath() + YUBIKEY_KEY_FILE)) {
+			//create an empty file so that openFile doesn't fail (due to the std::ios::in flag)
+			std::ofstream(Config::getConfigPath() + YUBIKEY_KEY_FILE).close();
+		}
+		m_file.open(Config::getConfigPath() + YUBIKEY_KEY_FILE,
+			std::ios::in | std::ios::out | std::ios::binary,
+			_SH_DENYRW
+		);
+		if (!m_file.is_open())
+			throw std::runtime_error("Failed to open yubikey file!");
+	}
+
+	YubiKeyFile::~YubiKeyFile() {
+		m_file.close();
+	}
+
+	CryptoPP::SecByteBlock YubiKeyFile::generateKeyFile() {
+		CryptoPP::SecByteBlock keydata = CryptoUtils::randomSBB(YUBIKEY_DATA_LEN);
+		m_file.seekp(0);
+		m_file.write(reinterpret_cast<const char*>(keydata.data()), keydata.size());
+		m_file << std::flush;
+		return keydata;
+	}
+
+	CryptoPP::SecByteBlock YubiKeyFile::readKeyFile() {
+		std::ifstream file(Config::getConfigPath() + YUBIKEY_KEY_FILE, std::ios::binary);
+		CryptoPP::SecByteBlock keydata(YUBIKEY_DATA_LEN);
+		m_file.seekg(0);
+		m_file.read(reinterpret_cast<char*>(keydata.data()), YUBIKEY_DATA_LEN);
+		return keydata;
+	}
+
 	Yubi::Yubi() {
 		throwOnError(ykpiv_init(&m_state, true), "ykpiv_init");
 		throwOnError(ykpiv_connect(m_state, NULL), "ykpiv_connect");
@@ -198,27 +233,6 @@ namespace Crypto {
 			case DEVTYPE_YK5: return "YubiKey 5";
 		}
 		return "Unknown";
-	}
-
-	CryptoPP::SecByteBlock Yubi::generateKeyFile() {
-		CryptoPP::SecByteBlock keydata = CryptoUtils::randomSBB(YUBIKEY_DATA_LEN);
-		std::ofstream file(Config::getConfigPath() + YUBIKEY_KEY_FILE, std::ios::binary);
-		if (!file.is_open())
-			throw std::runtime_error("generateKeyFile : Failed to open YubiKey data file");
-
-		file.write(reinterpret_cast<const char*>(keydata.data()), keydata.size());
-		return keydata;
-	}
-
-	CryptoPP::SecByteBlock Yubi::readKeyFile() {
-		std::ifstream file(Config::getConfigPath() + YUBIKEY_KEY_FILE, std::ios::binary);
-		if (!file.is_open())
-			throw std::runtime_error("readKeyFile : Failed to open YubiKey data file");
-
-		CryptoPP::SecByteBlock keydata(YUBIKEY_DATA_LEN);
-		file.read(reinterpret_cast<char*>(keydata.data()), YUBIKEY_DATA_LEN);
-
-		return keydata;
 	}
 
 	void Yubi::throwOnError(ykpiv_rc err, const std::string& action) {
