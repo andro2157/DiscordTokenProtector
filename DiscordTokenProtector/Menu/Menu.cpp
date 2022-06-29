@@ -413,7 +413,7 @@ namespace Menu {
 				g_tokenManager.updateCurrentCachedInfo(Discord::getUserInfo(g_tokenManager.getCurrentToken()));
 			}
 			catch (curl_exception& e) {
-				MessageBoxA(NULL, "Failed to fetch user info, please check your internet connection", "Discord Token Protector", MB_ICONWARNING | MB_OK);
+				MessageBoxA(NULL, "Failed to fetch user info, please check your internet connection.", "Discord Token Protector", MB_ICONWARNING | MB_OK);
 				return;
 			}
 			catch (invalid_token_exception& e) {
@@ -501,7 +501,7 @@ namespace Menu {
 			ImGui::TextWrapped("DTP is not affiliated with Discord.");
 			ImGui::TextWrapped("DTP is in NO way responsible for what can happen on your Discord account.");
 			ImGui::TextWrapped("Chances of getting terminated using DTP are very low, but"
-				"please keep in mind that using a thirdparty software is against Discord\'s TOS.");
+				"please keep in mind that using a third-party software is against Discord\'s TOS.");
 
 
 			ImGui::NewLine();
