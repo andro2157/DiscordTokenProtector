@@ -35,6 +35,7 @@ But this will protect you against most token grabbers:
 #### ✅ Check the integrity of your Discord installation on launch (BetterDiscord is supported)
 #### ✅ Check scripts for known malwares *(eg AnarchyGrabber3)*
 #### ✅ Protect the Discord process from memory reading / code injection
+#### ✅ Protect DTP from tampering attacks (protects the process/config from unauthorized users)
 
 **Except from YubiKey NEO*
 
