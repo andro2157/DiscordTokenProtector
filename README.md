@@ -41,7 +41,7 @@ But this will protect you against most token grabbers:
 
 ## Installation / Update
 
-### Download the lastest release **[HERE](https://github.com/andro2157/DiscordTokenProtector/releases)**
+### Download the latest release **[HERE](https://github.com/andro2157/DiscordTokenProtector/releases)**
 
 * Start DiscordTokenProtectorSetup.exe
 * Select between Normal and NoStartup installation

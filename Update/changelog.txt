@@ -1,3 +1,8 @@
+Dev 11 : Fix the detection
++ Fixed the token detection on new tokens
++ Added a way to manually add tokens
+* Fixed some spelling issues
+
 Dev 10 : Multiaccount support
 + Added multi account support
 + Added system proxy support

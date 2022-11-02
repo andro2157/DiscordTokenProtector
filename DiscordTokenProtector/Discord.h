@@ -43,6 +43,8 @@ public:
 	static bool AcceptHandoff(const std::string& port, const std::string& key, const secure_string& token);
 	static DiscordUserInfo getUserInfo(const secure_string& token);
 
+	static std::vector<secure_string> extractTokens(const secure_string& data);
+
 	secure_string getMemoryToken(bool verify);
 
 	[[deprecated("Patched by Discord : Use memory reading one instead")]]
