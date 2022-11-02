@@ -199,7 +199,7 @@ namespace Crypto {
 		return retries;
 	}
 
-	int Yubi::authentificate(const secure_string& pin) {
+	int Yubi::authenticate(const secure_string& pin) {
 		int tries = 0;
 		m_err = ykpiv_verify(m_state, pin.c_str(), &tries);
 		if (m_err == YKPIV_OK || m_err == YKPIV_WRONG_PIN)

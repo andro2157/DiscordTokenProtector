@@ -1,6 +1,6 @@
 # YubiKey Setup
 
-## If you already have a card authentification certificate skip to step 6
+## If you already have a card authentication certificate skip to step 6
 
 *Note: YubiKey NEO are not supported*
 
@@ -14,7 +14,7 @@ Download it here : https://www.yubico.com/support/download/yubikey-manager/
   <img width="500" src="Assets/Yubi2.png">
 </p>
 
-### 3) Under "Card Authentification" click "Generate"
+### 3) Under "Card Authentication" click "Generate"
 
 <p align="center">
   <img width="500" src="Assets/Yubi3.png">

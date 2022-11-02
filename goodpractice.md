@@ -2,7 +2,7 @@
 
 ## ✔️ If you use Discord on your browser, don't forget to disconnect from it after using it
 Many grabbers also grab cookies / tokens from browsers on your computer. They sometimes only target the Discord token, therefore,
-don't forget to **remove every cookies / datas from discord.com**.\
+don't forget to **remove every cookies / data from discord.com**.\
 If you want to log into Discord in your browser, please consider using the **incognito mode**.\
 Furthermore, if you are logged into your browser, the Discord client will automatically connect to your account using handoff. This can be dangerous as some grabbers try to kill the DTP process to start the client without protection; with handoff you automatically leak your token.
 
@@ -19,7 +19,7 @@ Currently DTP can protect you from most of grabbers:
 - (Less common) Script injection / Discord module tampering *(from dev-6)*
 - (Rare) Memory reading *(from dev-8)*
 
-However, any very well targetted attacks against DTP can bypass the protection.\
+However, any very well targeted attacks against DTP can bypass the protection.\
 **⚠️ Any process that has admin priviledges can disable this protection, and get your token ⚠️**\
 **Please make sure to enable UAC (enabled by default) and do NOT give admin priviledges to any process!**
 

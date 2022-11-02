@@ -94,7 +94,7 @@ bool TokenManager::migrateOldToken() {
 	return true;
 }
 
-size_t TokenManager::addToken(const secure_string token, const DiscordUserInfo info) {
+void TokenManager::addToken(const secure_string token, const DiscordUserInfo info) {
 	m_mutex.lock();
 
 	secure_string encrypted_token = CryptoUtils::KD_encrypt(token, g_context.kd);

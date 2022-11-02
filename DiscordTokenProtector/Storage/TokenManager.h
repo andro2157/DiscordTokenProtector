@@ -31,8 +31,7 @@ public:
 	size_t getCurrentIndex() const { return m_idx; }
 	void setIndex(const size_t idx);
 
-	//Returns the index
-	size_t addToken(const secure_string token, const DiscordUserInfo info);
+	void addToken(const secure_string token, const DiscordUserInfo info);
 	void removeToken(size_t idx);
 	void removeToken(const secure_string token);
 

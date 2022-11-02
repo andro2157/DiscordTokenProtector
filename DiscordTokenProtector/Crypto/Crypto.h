@@ -58,7 +58,7 @@ namespace Crypto {
 		int getRetryCount();
 
 		//Returns -1 if authentificated, else it returns the amount of retries
-		int authentificate(const secure_string& pin);
+		int authenticate(const secure_string& pin);
 		//in.size() == 256
 		secure_string signData(const CryptoPP::SecByteBlock& in);
 
