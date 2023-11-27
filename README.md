@@ -1,6 +1,8 @@
 # Discord Token Protector
 #### Protect your Discord token from malicious grabbers!
 
+## [For NTTS viewers here's my response to the video](NTTS.md)
+
 ##### ✔️ **Works with the latest version of Discord**
 
 ![Main Workflow](https://github.com/andro2157/DiscordTokenProtector/actions/workflows/msbuild.yml/badge.svg)
