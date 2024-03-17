@@ -12,7 +12,11 @@
       "name": "curl",
       "features": ["openssl"]
     },
-    "polyhook2",
+    {
+	   "name": "polyhook2",
+     "version>=": "2022-03-01"
+    },
     "gl3w"
-  ]
+  ],
+  "builtin-baseline": "f9f18a0d0325be221ce6f2462593acb20574e758"
 }

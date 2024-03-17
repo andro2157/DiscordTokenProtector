@@ -97,24 +97,28 @@ Start a new cmd as admin in the `vcpkg` folder and type:
 vcpkg integrate install
 ```
 
-### Step 2: Installing the libraries
-Copy and paste this (in the vcpkg directory if you don't have it in the PATH)
-```
-vcpkg install imgui:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[opengl3-binding]:x86-windows-static imgui[glfw-binding]:x86-windows-static imgui[win32-binding]:x86-windows-static nlohmann-json:x86-windows-static cryptopp:x86-windows-static curl[openssl]:x86-windows-static polyhook2:x86-windows-static gl3w:x86-windows-static
-```
-*This process might take some time as it's building these libraries (for the static link)*
-
-### Step 3: Cloning DiscordTokenProtector
+### Step 2: Cloning DiscordTokenProtector
 ```
 git clone https://github.com/andro2157/DiscordTokenProtector
 ```
 
+
+### Step 3: Installing the libraries using manifest mode
+```
+cd DiscordTokenProtector
+vcpkg install --triplet x86-windows-static
+```
+*This process might take some time as it's building these libraries (for the static link)*
+
 ### Step 4: Open the project in VS
 Open `DiscordTokenProtector.sln`
 
+### Step 5: Open the project settings
+Set "Use Vcpkg Manifest" to Yes
+
 Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config in **x86**.
 
-### (Optional) Step 5: Compile with YubiKey support
+### (Optional) Step 6: Compile with YubiKey support
 * Download the latest yubico-piv-tool source code here: https://developers.yubico.com/yubico-piv-tool/Releases/ \
 **Don't clone from the repo, it won't compile on Windows!**
 * Follow the instructions [here](https://github.com/Yubico/yubico-piv-tool#building-on-windows) to create the project.
