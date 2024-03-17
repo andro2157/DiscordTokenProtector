@@ -98,7 +98,6 @@ vcpkg integrate install
 ```
 
 ### Step 2: Cloning DiscordTokenProtector
-Copy and paste this (in the vcpkg directory if you don't have it in the PATH)
 ```
 git clone https://github.com/andro2157/DiscordTokenProtector
 ```
