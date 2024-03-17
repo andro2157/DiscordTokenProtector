@@ -119,7 +119,7 @@ Set "Use Vcpkg Manifest" to Yes
 
 Everything should be setup, you just need to compile it with the `PROD` or `PROD-NOSTARTUP` config in **x86**.
 
-### (Optional) Step 5: Compile with YubiKey support
+### (Optional) Step 6: Compile with YubiKey support
 * Download the latest yubico-piv-tool source code here: https://developers.yubico.com/yubico-piv-tool/Releases/ \
 **Don't clone from the repo, it won't compile on Windows!**
 * Follow the instructions [here](https://github.com/Yubico/yubico-piv-tool#building-on-windows) to create the project.
